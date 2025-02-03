@@ -1,0 +1,22 @@
+{
+  "name": "@vic/permit-agent",
+  "version": "0.0.1",
+  "scripts": {
+    "dev": "tsx watch --clear=false src/index.ts",
+    "build": "tsc",
+    "test": "jest",
+    "prisma:generate": "prisma generate"
+  },
+  "dependencies": {
+    "@vic/shared": "workspace:^",
+    "@prisma/client": "^6.3.0",
+    "amqplib": "^0.10.5"
+  },
+  "devDependencies": {
+    "@types/amqplib": "^0.10.6",
+    "@types/node": "^22.1.0",
+    "prisma": "^6.3.0",
+    "tsx": "^4.7.0",
+    "typescript": "~5.6.3"
+  }
+} 

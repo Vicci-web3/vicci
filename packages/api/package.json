@@ -1,0 +1,27 @@
+{
+  "name": "@vic/api",
+  "version": "0.0.1",
+  "scripts": {
+    "dev": "tsx watch --clear=false src/server.ts",
+    "build": "tsc",
+    "test": "jest",
+    "prisma:generate": "prisma generate",
+    "prisma:migrate": "prisma migrate deploy"
+  },
+  "dependencies": {
+    "@fastify/autoload": "^6.0.0",
+    "@fastify/sensible": "^6.0.0",
+    "@joggr/fastify-prisma": "^5.0.0",
+    "@prisma/client": "^6.3.0",
+    "@vic/shared": "workspace:^",
+    "fastify": "^5.0.0",
+    "fastify-plugin": "^5.0.0"
+  },
+  "devDependencies": {
+    "@types/node": "^22.1.0",
+    "@fastify/type-provider-typebox": "^3.0.0",
+    "prisma": "^6.3.0",
+    "tsx": "^4.7.0",
+    "typescript": "~5.6.3"
+  }
+} 

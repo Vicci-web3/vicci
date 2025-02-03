@@ -1,0 +1,31 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model Campaign {
+  id          String   @id @default(uuid())
+  protocol    String
+  objective   String
+  rewardToken String
+  rewardType  String
+  amount      BigInt
+  validUntil  DateTime
+  createdAt   DateTime @default(now())
+  permits     Permit[]
+}
+
+model Permit {
+  id          String    @id
+  campaignId  String
+  campaign    Campaign  @relation(fields: [campaignId], references: [id])
+  recipient   String
+  claimed     Boolean   @default(false)
+  claimedAt   DateTime?
+  signature   String
+  createdAt   DateTime  @default(now())
+} 

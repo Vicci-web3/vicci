@@ -1,0 +1,123 @@
+services:
+  api:
+    build:
+      context: .
+      dockerfile: packages/api/Dockerfile
+    volumes:
+      - .:/usr/src/app:cached
+      - /usr/src/app/node_modules
+      - /usr/src/app/packages/api/node_modules
+      - /usr/src/app/packages/shared/node_modules
+    ports:
+      - "3000:3000"
+    depends_on:
+      postgres:
+        condition: service_healthy
+      rabbitmq:
+        condition: service_healthy
+    environment:
+      DATABASE_URL: postgresql://user:password@postgres:5432/vic
+      NODE_ENV: development
+      RABBITMQ_URL: amqp://rabbitmq:5672
+      GRAPH_API_KEY: ${GRAPH_API_KEY}
+    command: pnpm dev
+
+  indexer_agent:
+    build:
+      context: .
+      dockerfile: packages/indexer-agent/Dockerfile
+    volumes:
+      - .:/usr/src/app:cached
+      - /usr/src/app/node_modules
+      - /usr/src/app/packages/indexer-agent/node_modules
+      - /usr/src/app/packages/shared/node_modules
+    environment:
+      NODE_ENV: development
+      RABBITMQ_URL: amqp://rabbitmq:5672
+      GRAPH_API_KEY: ${GRAPH_API_KEY}
+    command: pnpm dev
+    depends_on:
+      - rabbitmq
+
+  permit_agent:
+    build:
+      context: .
+      dockerfile: packages/permit-agent/Dockerfile
+    volumes:
+      - .:/usr/src/app:cached
+      - /usr/src/app/node_modules
+      - /usr/src/app/packages/permit-agent/node_modules
+      - /usr/src/app/packages/shared/node_modules
+    environment:
+      NODE_ENV: development
+      RABBITMQ_URL: amqp://rabbitmq:5672
+      DATABASE_URL: postgresql://user:password@postgres:5432/vic
+    command: pnpm dev
+    depends_on:
+      - rabbitmq
+      - postgres
+
+  analysis_agent:
+    build:
+      context: .
+      dockerfile: packages/analysis-agent/Dockerfile
+    volumes:
+      - .:/usr/src/app:cached
+      - /usr/src/app/node_modules
+      - /usr/src/app/packages/analysis-agent/node_modules
+      - /usr/src/app/packages/shared/node_modules
+    environment:
+      NODE_ENV: development
+      RABBITMQ_URL: amqp://rabbitmq:5672
+    command: pnpm dev
+    depends_on:
+      - rabbitmq
+
+  targeting_agent:
+    build:
+      context: .
+      dockerfile: packages/targeting-agent/Dockerfile
+    volumes:
+      - .:/usr/src/app:cached
+      - /usr/src/app/node_modules
+      - /usr/src/app/packages/targeting-agent/node_modules
+      - /usr/src/app/packages/shared/node_modules
+    environment:
+      NODE_ENV: development
+      RABBITMQ_URL: amqp://rabbitmq:5672
+    command: pnpm dev
+    depends_on:
+      - rabbitmq
+
+  rabbitmq:
+    image: rabbitmq:3-management-alpine
+    ports:
+      - "5672:5672"
+      - "15672:15672"
+    healthcheck:
+      test: ["CMD", "rabbitmq-diagnostics", "check_port_connectivity"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+    volumes:
+      - rabbitmq_data:/var/lib/rabbitmq
+
+  postgres:
+    image: postgres:15-alpine
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    environment:
+      POSTGRES_USER: user
+      POSTGRES_PASSWORD: password
+      POSTGRES_DB: vic
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U user -d vic"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+volumes:
+  postgres_data:
+  rabbitmq_data: 

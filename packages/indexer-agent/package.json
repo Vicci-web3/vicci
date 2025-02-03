@@ -1,0 +1,20 @@
+{
+  "name": "@vic/indexer-agent",
+  "version": "0.0.1",
+  "scripts": {
+    "dev": "tsx watch --clear=false src/index.ts",
+    "build": "tsc",
+    "test": "jest"
+  },
+  "dependencies": {
+    "@vic/shared": "workspace:^",
+    "amqplib": "^0.10.5",
+    "@graphprotocol/client-cli": "^3.0.7"
+  },
+  "devDependencies": {
+    "@types/amqplib": "^0.10.6",
+    "@types/node": "^22.1.0",
+    "tsx": "^4.7.0",
+    "typescript": "~5.6.3"
+  }
+} 

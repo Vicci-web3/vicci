@@ -1,0 +1,17 @@
+{
+  "name": "vic",
+  "private": true,
+  "packageManager": "pnpm@9.15.5",
+  "workspaces": [
+    "packages/*"
+  ],
+  "scripts": {
+    "dev:docker": "docker compose -f docker-compose.dev.yml up",
+    "dev": "turbo run dev",
+    "build": "turbo run build",
+    "test": "turbo run test"
+  },
+  "devDependencies": {
+    "turbo": "^1.12.2"
+  }
+} 

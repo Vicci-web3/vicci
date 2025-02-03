@@ -1,0 +1,66 @@
+# src/queries/uniswap.graphql
+
+query GetHighLiquidityUniswapPools {
+  pools(
+    first: 100
+    orderBy: totalValueLockedUSD
+    orderDirection: desc
+    where: { totalValueLockedUSD_gt: "1000000" }
+  ) {
+    id
+    token0 {
+      id
+      symbol
+      decimals
+    }
+    token1 {
+      id
+      symbol
+      decimals
+    }
+    totalValueLockedUSD
+    totalValueLockedToken0
+    totalValueLockedToken1
+    feeTier
+    liquidity
+    token0Price
+    token1Price
+    poolHourData(
+      first: 24
+      orderBy: periodStartUnix
+      orderDirection: desc
+    ) {
+      periodStartUnix
+      volumeUSD
+      tvlUSD
+    }
+  }
+}
+
+# Get individual positions
+query GetPositions {
+  positions(
+    first: 100
+    orderBy: liquidity
+    orderDirection: desc
+    where: { liquidity_gt: "0" }
+  ) {
+    id
+    owner
+    liquidity
+    liquidityUSD
+  }
+}
+
+# Get protocol metrics
+query GetUniswapMetrics {
+  factories(first: 1) {
+    id
+    poolCount
+    totalValueLockedUSD
+    totalFeesUSD
+  }
+  bundles(first: 1) {
+    ethPriceUSD
+  }
+}
