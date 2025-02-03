@@ -1,72 +1,171 @@
 import { MessageBus, Topics } from '@vic/shared'
+import { getCurrentBlock } from './utils/chain'
+import prisma from './services/prisma'
 
-interface Campaign {
-  id: string
-  protocol: string
-  objective: string
-  rewardToken: string
-  rewardType: string
-  amount: string
-  validUntil: string
+interface IndexerConfig {
+  chainId: number
+  startBlock?: number
+  indexingInterval: number  // Number of blocks per batch
+  pollInterval: number      // Ms between checks for new blocks
 }
 
 class IndexerAgent {
   private messageBus: MessageBus
+  private lastIndexedBlock: number = 0  // Initialize with 0
+  private readonly config: IndexerConfig
 
-  constructor() {
+  constructor(config: IndexerConfig = {
+    chainId: 1,  // Default to Ethereum mainnet
+    startBlock: undefined,    // Will start from latest if undefined
+    indexingInterval: 100,    // Index 100 blocks at a time
+    pollInterval: 60000      // Check for new blocks every minute
+  }) {
     this.messageBus = new MessageBus()
+    this.config = config
   }
 
   async start() {
     await this.messageBus.connect()
     console.log('Indexer agent started')
 
-    await this.setupSubscriptions()
+    // Get or create indexer state
+    const state = await this.getOrCreateIndexerState()
+    this.lastIndexedBlock = this.config.startBlock || state.lastIndexed
+
+    console.log(`Starting from block ${this.lastIndexedBlock}`)
+
+    // Start continuous indexing
+    await this.setupContinuousIndexing()
     await this.setupShutdown()
   }
 
-  private async setupSubscriptions() {
-    // Listen for new campaigns
-    await this.messageBus.subscribe(Topics.NEW_CAMPAIGN, async (campaign: Campaign) => {
-      console.log('New campaign to index:', campaign)
-      
-      try {
-        // Add your indexing logic here
-        // For example:
-        // - Query The Graph for relevant data
-        // - Process and validate campaign data
-        // - Update campaign status
-        
-        await this.messageBus.publish(Topics.INDEXER_EVENT, {
-          campaignId: campaign.id,
-          status: 'indexed',
-          timestamp: new Date().toISOString()
-        })
-      } catch (error) {
-        console.error('Error processing campaign:', error)
-        
-        await this.messageBus.publish(Topics.INDEXER_EVENT, {
-          campaignId: campaign.id,
-          status: 'error',
-          error: error instanceof Error ? error.message : 'Unknown error',
-          timestamp: new Date().toISOString()
-        })
+  private async getOrCreateIndexerState() {
+    const state = await prisma.indexerState.findFirst({
+      where: { chainId: this.config.chainId }
+    })
+
+    if (state) return state
+
+    // Create initial state
+    return prisma.indexerState.create({
+      data: {
+        chainId: this.config.chainId,
+        lastIndexed: await getCurrentBlock()
       }
     })
   }
 
-  private async setupShutdown() {
-    process.on('SIGTERM', async () => {
-      console.log('Shutting down indexer agent...')
-      await this.messageBus.close()
-      process.exit(0)
+  private async updateLastIndexedBlock(blockNumber: number) {
+    this.lastIndexedBlock = blockNumber
+    await prisma.indexerState.updateMany({
+      where: { chainId: this.config.chainId },
+      data: { lastIndexed: blockNumber }
     })
+  }
 
-    process.on('SIGINT', async () => {
+  private async setupContinuousIndexing() {
+    setInterval(async () => {
+      try {
+        const currentBlock = await getCurrentBlock()
+        
+        if (currentBlock > this.lastIndexedBlock + this.config.indexingInterval) {
+          const fromBlock = this.lastIndexedBlock + 1
+          const toBlock = Math.min(
+            this.lastIndexedBlock + this.config.indexingInterval,
+            currentBlock
+          )
+
+          // Create indexing task
+          const task = await prisma.indexingTask.create({
+            data: {
+              chainId: this.config.chainId,
+              fromBlock,
+              toBlock,
+              status: 'processing',
+              startedAt: new Date()
+            }
+          })
+
+          try {
+            console.log(`Indexing blocks ${fromBlock} to ${toBlock}`)
+            await this.indexBlockRange(fromBlock, toBlock)
+            
+            // Update task status
+            await prisma.indexingTask.update({
+              where: { id: task.id },
+              data: {
+                status: 'completed',
+                completedAt: new Date()
+              }
+            })
+
+            // Update last indexed block
+            await this.updateLastIndexedBlock(toBlock)
+
+            // Publish batch completion event
+            await this.messageBus.publish(Topics.BATCH_COMPLETE, {
+              blockRange: [fromBlock, toBlock]
+            })
+          } catch (error) {
+            // Update task status on error
+            await prisma.indexingTask.update({
+              where: { id: task.id },
+              data: {
+                status: 'failed',
+                error: error instanceof Error ? error.message : 'Unknown error',
+                completedAt: new Date()
+              }
+            })
+            throw error
+          }
+        }
+      } catch (error) {
+        console.error('Error during indexing:', error)
+      }
+    }, this.config.pollInterval)
+  }
+
+  private async indexBlockRange(fromBlock: number, toBlock: number) {
+    try {
+      // TODO: Implement indexing logic here
+      // - Query subgraphs for data in block range
+      // - Process and validate data
+      // - Store or forward results as needed
+      
+      await this.messageBus.publish(Topics.INDEXER_EVENT, {
+        blockNumber: toBlock,
+        timestamp: new Date().toISOString(),
+        status: 'indexed',
+        data: {
+          fromBlock,
+          toBlock
+        }
+      })
+    } catch (error) {
+      console.error(`Error indexing block range ${fromBlock}-${toBlock}:`, error)
+      
+      await this.messageBus.publish(Topics.INDEXER_EVENT, {
+        blockNumber: fromBlock,
+        timestamp: new Date().toISOString(),
+        status: 'error',
+        error: error instanceof Error ? error.message : 'Unknown error',
+        data: {
+          fromBlock,
+          toBlock
+        }
+      })
+    }
+  }
+
+  private async setupShutdown() {
+    const shutdown = async () => {
       console.log('Shutting down indexer agent...')
       await this.messageBus.close()
       process.exit(0)
-    })
+    }
+
+    process.on('SIGTERM', shutdown)
+    process.on('SIGINT', shutdown)
   }
 }
 

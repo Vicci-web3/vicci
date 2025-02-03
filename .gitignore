@@ -1,4 +1,7 @@
+# Environment variables
 .env
+.env.graph
 node_modules
 dist/
 .turbo/
+!.env.example

@@ -4,17 +4,23 @@
   "scripts": {
     "dev": "tsx watch --clear=false src/index.ts",
     "build": "tsc",
-    "test": "jest"
+    "build:graph": "graphclient build",
+    "test": "jest",
+    "prisma:generate": "prisma generate",
+    "prisma:migrate": "prisma migrate deploy",
+    "db:push": "prisma db push"
   },
   "dependencies": {
     "@vic/shared": "workspace:^",
     "amqplib": "^0.10.5",
-    "@graphprotocol/client-cli": "^3.0.7"
+    "@prisma/client": "^6.3.0"
   },
   "devDependencies": {
+    "@graphprotocol/client-cli": "^3.0.7",
     "@types/amqplib": "^0.10.6",
     "@types/node": "^22.1.0",
     "tsx": "^4.7.0",
-    "typescript": "~5.6.3"
+    "typescript": "~5.6.3",
+    "prisma": "^6.3.0"
   }
-} 
+}

@@ -1,0 +1,55 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// Basic target model to track entities we're monitoring
+model Target {
+  id        String   @id @default(uuid())
+  address   String   // Ethereum address being targeted
+  name      String?  // Optional name/label for the target
+  type      String   // Type of target (e.g., "wallet", "contract", "pool")
+  active    Boolean  @default(true)
+  priority  Int      @default(1)
+  metadata  Json?    // Flexible metadata storage
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  // Unique constraint on address to prevent duplicates
+  @@unique([address])
+  @@index([active, priority])
+}
+
+// Track monitoring rules/conditions
+model Rule {
+  id          String   @id @default(uuid())
+  name        String
+  description String?
+  condition   String   // Rule condition/logic
+  enabled     Boolean  @default(true)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+}
+
+// Store alerts/notifications generated
+model Alert {
+  id        String   @id @default(uuid())
+  targetId  String
+  message   String
+  severity  String   // e.g., "info", "warning", "critical"
+  metadata  Json?
+  read      Boolean  @default(false)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([targetId])
+  @@index([severity])
+  @@index([read])
+}

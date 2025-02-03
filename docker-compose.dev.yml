@@ -16,11 +16,12 @@ services:
       rabbitmq:
         condition: service_healthy
     environment:
-      DATABASE_URL: postgresql://user:password@postgres:5432/vic
+      DATABASE_URL: ${API_DATABASE_URL}
       NODE_ENV: development
       RABBITMQ_URL: amqp://rabbitmq:5672
       GRAPH_API_KEY: ${GRAPH_API_KEY}
     command: pnpm dev
+    env_file: .env
 
   indexer_agent:
     build:
@@ -32,12 +33,17 @@ services:
       - /usr/src/app/packages/indexer-agent/node_modules
       - /usr/src/app/packages/shared/node_modules
     environment:
+      DATABASE_URL: ${INDEXER_AGENT_DATABASE_URL}
       NODE_ENV: development
       RABBITMQ_URL: amqp://rabbitmq:5672
       GRAPH_API_KEY: ${GRAPH_API_KEY}
     command: pnpm dev
     depends_on:
       - rabbitmq
+      - postgres
+    env_file:
+      - .env
+      - .env.graph
 
   permit_agent:
     build:
@@ -49,13 +55,14 @@ services:
       - /usr/src/app/packages/permit-agent/node_modules
       - /usr/src/app/packages/shared/node_modules
     environment:
+      DATABASE_URL: ${PERMIT_AGENT_DATABASE_URL}
       NODE_ENV: development
       RABBITMQ_URL: amqp://rabbitmq:5672
-      DATABASE_URL: postgresql://user:password@postgres:5432/vic
     command: pnpm dev
     depends_on:
       - rabbitmq
       - postgres
+    env_file: .env
 
   analysis_agent:
     build:
@@ -67,11 +74,14 @@ services:
       - /usr/src/app/packages/analysis-agent/node_modules
       - /usr/src/app/packages/shared/node_modules
     environment:
+      DATABASE_URL: ${ANALYSIS_AGENT_DATABASE_URL}
       NODE_ENV: development
       RABBITMQ_URL: amqp://rabbitmq:5672
     command: pnpm dev
     depends_on:
       - rabbitmq
+      - postgres
+    env_file: .env
 
   targeting_agent:
     build:
@@ -83,11 +93,14 @@ services:
       - /usr/src/app/packages/targeting-agent/node_modules
       - /usr/src/app/packages/shared/node_modules
     environment:
+      DATABASE_URL: ${TARGETING_AGENT_DATABASE_URL}
       NODE_ENV: development
       RABBITMQ_URL: amqp://rabbitmq:5672
     command: pnpm dev
     depends_on:
       - rabbitmq
+      - postgres
+    env_file: .env
 
   rabbitmq:
     image: rabbitmq:3-management-alpine
@@ -105,15 +118,16 @@ services:
   postgres:
     image: postgres:15-alpine
     ports:
-      - "5432:5432"
+      - "${POSTGRES_PORT}:5432"
     volumes:
       - postgres_data:/var/lib/postgresql/data
+      - ./docker/postgres:/docker-entrypoint-initdb.d
     environment:
-      POSTGRES_USER: user
-      POSTGRES_PASSWORD: password
-      POSTGRES_DB: vic
+      POSTGRES_USER: ${POSTGRES_USER}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+      POSTGRES_MULTIPLE_DATABASES: "api,analysis_agent,indexer_agent,permit_agent,targeting_agent"
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U user -d vic"]
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER}"]
       interval: 5s
       timeout: 5s
       retries: 5

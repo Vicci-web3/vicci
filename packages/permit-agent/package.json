@@ -2,10 +2,12 @@
   "name": "@vic/permit-agent",
   "version": "0.0.1",
   "scripts": {
-    "dev": "tsx watch --clear=false src/index.ts",
+    "prisma:generate": "prisma generate",
+    "prisma:migrate": "prisma migrate deploy",
+    "db:init": "pnpm prisma:generate && pnpm prisma:migrate",
+    "dev": "pnpm db:init && tsx watch --clear=false src/index.ts",
     "build": "tsc",
-    "test": "jest",
-    "prisma:generate": "prisma generate"
+    "test": "jest"
   },
   "dependencies": {
     "@vic/shared": "workspace:^",
