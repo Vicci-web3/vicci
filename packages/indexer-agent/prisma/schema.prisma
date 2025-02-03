@@ -8,16 +8,16 @@ datasource db {
 }
 
 model IndexerState {
-  id            String   @id @default(cuid())
-  chainId       Int
-  lastIndexed   Int
-  updatedAt     DateTime @updatedAt
-  createdAt     DateTime @default(now())
+  id          String   @id @default(uuid())
+  chainId     Int      @unique
+  lastIndexed Int      @default(0)
+  updatedAt   DateTime @updatedAt
+  createdAt   DateTime @default(now())
 }
 
 // We might want to track indexing tasks/jobs
 model IndexingTask {
-  id            String   @id @default(cuid())
+  id            Int      @id @default(autoincrement())
   chainId       Int
   fromBlock     Int
   toBlock       Int

@@ -1,0 +1,57 @@
+# src/queries/sushiswap.graphql
+
+query GetHighLiquiditySushiswapPositions {
+  liquidityPools(
+    first: 100
+    orderBy: totalValueLockedUSD
+    orderDirection: desc
+    where: { totalValueLockedUSD_gt: "1000000" }
+  ) {
+    id
+    totalValueLockedUSD
+    inputTokens {
+      id
+      symbol
+      decimals
+    }
+    inputTokenBalances
+    # Get additional pool metrics
+    dailySnapshots(
+      first: 1
+      orderBy: timestamp
+      orderDirection: desc
+    ) {
+      dailyVolumeUSD
+      dailyVolumeByTokenAmount
+      dailyVolumeByTokenUSD
+    }
+  }
+}
+
+# Query for active accounts
+query GetActiveAccounts {
+  accounts(
+    first: 100
+    orderBy: positionCount
+    orderDirection: desc
+    where: { positionCount_gt: 0 }
+  ) {
+    id
+    positionCount
+    depositCount
+    withdrawCount
+    swapCount
+  }
+}
+
+# Query Protocol Stats
+query GetProtocolStats {
+  protocols {
+    id
+    ... on DexAmmProtocol {
+      totalValueLockedUSD
+      totalPoolCount
+      cumulativeVolumeUSD
+    }
+  }
+}

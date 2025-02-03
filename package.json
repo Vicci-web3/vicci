@@ -13,5 +13,14 @@
   },
   "devDependencies": {
     "turbo": "^1.12.2"
+  },
+  "pnpm": {
+    "peerDependencyRules": {
+      "ignoreMissing": [
+        "@graphql-mesh/types",
+        "@graphql-mesh/utils",
+        "@graphql-mesh/store"
+      ]
+    }
   }
 } 

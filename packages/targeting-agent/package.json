@@ -2,7 +2,7 @@
   "name": "@vic/targeting-agent",
   "version": "0.0.1",
   "scripts": {
-    "dev": "tsx watch --clear=false src/index.ts",
+    "dev": "tsx watch --clear-screen=false src/index.ts",
     "build": "tsc",
     "test": "jest",
     "prisma:generate": "prisma generate",

@@ -2,25 +2,45 @@
   "name": "@vic/indexer-agent",
   "version": "0.0.1",
   "scripts": {
-    "dev": "tsx watch --clear=false src/index.ts",
+    "dev": "pnpm db:init && tsx watch --clear-screen=false src/index.ts",
+    "codegen": "graphclient build",
     "build": "tsc",
     "build:graph": "graphclient build",
     "test": "jest",
     "prisma:generate": "prisma generate",
     "prisma:migrate": "prisma migrate deploy",
+    "db:init": "pnpm prisma:generate && pnpm prisma:migrate",
     "db:push": "prisma db push"
   },
   "dependencies": {
+    "@graphql-mesh/cache-localforage": "^0.x",
+    "@graphql-mesh/cross-helpers": "^0.x",
+    "@graphql-mesh/graphql": "^0.x",
+    "@graphql-mesh/http": "^0.x",
+    "@graphql-mesh/merger-bare": "^0.104.15",
+    "@graphql-mesh/merger-stitching": "^0.x",
+    "@graphql-mesh/runtime": "^0.x",
+    "@graphql-mesh/store": "^0.x",
+    "@graphql-mesh/types": "^0.x",
+    "@graphql-mesh/utils": "^0.x",
+    "@graphql-tools/delegate": "^10.0.3",
+    "@graphql-tools/wrap": "^10.0.1",
+    "@graphql-yoga/plugin-persisted-operations": "^3.10.11",
+    "@prisma/client": "^6.3.0",
     "@vic/shared": "workspace:^",
+    "@whatwg-node/fetch": "^0.10.0",
     "amqplib": "^0.10.5",
-    "@prisma/client": "^6.3.0"
+    "dotenv": "^16.4.7",
+    "graphql": "^16.8.1",
+    "viem": "^2.22.19",
+    "ws": "^8.18.0"
   },
   "devDependencies": {
     "@graphprotocol/client-cli": "^3.0.7",
     "@types/amqplib": "^0.10.6",
     "@types/node": "^22.1.0",
+    "prisma": "^6.3.0",
     "tsx": "^4.7.0",
-    "typescript": "~5.6.3",
-    "prisma": "^6.3.0"
+    "typescript": "~5.6.3"
   }
 }

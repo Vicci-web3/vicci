@@ -38,7 +38,7 @@ query GetHighLiquidityUniswapPools {
 }
 
 # Get individual positions
-query GetPositions {
+query GetUniswapPositions {
   positions(
     first: 100
     orderBy: liquidity
@@ -48,7 +48,6 @@ query GetPositions {
     id
     owner
     liquidity
-    liquidityUSD
   }
 }
 

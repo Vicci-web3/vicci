@@ -2,7 +2,7 @@
   "name": "@vic/api",
   "version": "0.0.1",
   "scripts": {
-    "dev": "tsx watch --clear=false src/server.ts",
+    "dev": "tsx watch --clear-screen=false src/server.ts",
     "build": "tsc",
     "test": "jest",
     "prisma:generate": "prisma generate",

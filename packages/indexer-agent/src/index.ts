@@ -1,7 +1,8 @@
+import 'dotenv/config'
 import { MessageBus, Topics } from '@vic/shared'
 import { getCurrentBlock } from './utils/chain'
 import prisma from './services/prisma'
-
+import { GetMergedPositionsDocument, execute } from '../.graphclient'
 interface IndexerConfig {
   chainId: number
   startBlock?: number
@@ -18,7 +19,7 @@ class IndexerAgent {
     chainId: 1,  // Default to Ethereum mainnet
     startBlock: undefined,    // Will start from latest if undefined
     indexingInterval: 100,    // Index 100 blocks at a time
-    pollInterval: 60000      // Check for new blocks every minute
+    pollInterval: 30000      // Check for new blocks every minute
   }) {
     this.messageBus = new MessageBus()
     this.config = config
@@ -50,23 +51,26 @@ class IndexerAgent {
     return prisma.indexerState.create({
       data: {
         chainId: this.config.chainId,
-        lastIndexed: await getCurrentBlock()
+        lastIndexed: 0  // Start from block 0 or specify a starting block
       }
     })
   }
 
-  private async updateLastIndexedBlock(blockNumber: number) {
-    this.lastIndexedBlock = blockNumber
-    await prisma.indexerState.updateMany({
-      where: { chainId: this.config.chainId },
-      data: { lastIndexed: blockNumber }
+  private async updateIndexerState(blockNumber: number) {
+    return prisma.indexerState.update({
+      where: {
+        chainId: this.config.chainId
+      },
+      data: {
+        lastIndexed: blockNumber  // Now we store the actual block number
+      }
     })
   }
 
   private async setupContinuousIndexing() {
     setInterval(async () => {
       try {
-        const currentBlock = await getCurrentBlock()
+        const currentBlock = await getCurrentBlock(this.config.chainId)
         
         if (currentBlock > this.lastIndexedBlock + this.config.indexingInterval) {
           const fromBlock = this.lastIndexedBlock + 1
@@ -74,6 +78,7 @@ class IndexerAgent {
             this.lastIndexedBlock + this.config.indexingInterval,
             currentBlock
           )
+
 
           // Create indexing task
           const task = await prisma.indexingTask.create({
@@ -86,10 +91,32 @@ class IndexerAgent {
             }
           })
 
+
+          const positions = await execute(GetMergedPositionsDocument, {})
+          /*
+          const positions = await execute(
+            `
+            {
+              positions(
+                first: 100
+                orderBy: liquidity
+                orderDirection: desc
+                where: { liquidity_gt: "0" }
+              ) {
+                id
+                owner
+                liquidity
+              }
+            }
+            `
+          )
+            */
+          console.log(positions)
+
           try {
             console.log(`Indexing blocks ${fromBlock} to ${toBlock}`)
             await this.indexBlockRange(fromBlock, toBlock)
-            
+            console.log(positions)
             // Update task status
             await prisma.indexingTask.update({
               where: { id: task.id },
@@ -100,7 +127,7 @@ class IndexerAgent {
             })
 
             // Update last indexed block
-            await this.updateLastIndexedBlock(toBlock)
+            await this.updateIndexerState(toBlock)
 
             // Publish batch completion event
             await this.messageBus.publish(Topics.BATCH_COMPLETE, {

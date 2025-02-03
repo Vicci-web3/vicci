@@ -13,6 +13,7 @@ import { fetch as fetchFn } from '@whatwg-node/fetch';
 import { MeshResolvedSource } from '@graphql-mesh/runtime';
 import { MeshTransform, MeshPlugin } from '@graphql-mesh/types';
 import GraphqlHandler from "@graphql-mesh/graphql"
+import { parse } from 'graphql';
 import StitchingMerger from "@graphql-mesh/merger-stitching";
 import { printWithCache } from '@graphql-mesh/utils';
 import { usePersistedOperations } from '@graphql-yoga/plugin-persisted-operations';
@@ -21,14 +22,12 @@ import { getMesh, ExecuteMeshFn, SubscribeMeshFn, MeshContext as BaseMeshContext
 import { MeshStore, FsStoreStorageAdapter } from '@graphql-mesh/store';
 import { path as pathModule } from '@graphql-mesh/cross-helpers';
 import { ImportFn } from '@graphql-mesh/types';
-import type { SushiswapV3BaseTypes } from './sources/sushiswap-v3-base/types';
-import type { UniswapV3MainnetTypes } from './sources/uniswap-v3-mainnet/types';
 import type { UniswapV3BaseTypes } from './sources/uniswap-v3-base/types';
-import type { SushiswapV3MainnetTypes } from './sources/sushiswap-v3-mainnet/types';
-import * as importedModule$0 from "./sources/sushiswap-v3-base/introspectionSchema";
-import * as importedModule$1 from "./sources/uniswap-v3-mainnet/introspectionSchema";
-import * as importedModule$2 from "./sources/uniswap-v3-base/introspectionSchema";
-import * as importedModule$3 from "./sources/sushiswap-v3-mainnet/introspectionSchema";
+import type { UniswapV3mainnetTypes } from './sources/uniswapV3mainnet/types';
+import type { SushiswapV3MainnetTypes } from './sources/sushiswapV3Mainnet/types';
+import * as importedModule$0 from "./sources/uniswapV3mainnet/introspectionSchema";
+import * as importedModule$1 from "./sources/uniswap-v3-base/introspectionSchema";
+import * as importedModule$2 from "./sources/sushiswapV3Mainnet/introspectionSchema";
 export type Maybe<T> = T | null;
 export type InputMaybe<T> = Maybe<T>;
 export type Exact<T extends { [key: string]: unknown }> = { [K in keyof T]: T[K] };
@@ -137,12 +136,7 @@ export type Query = {
   tokenWhitelistSymbols: Array<_TokenWhitelistSymbol>;
   protocol?: Maybe<Protocol>;
   protocols: Array<Protocol>;
-  feeAmountEnabled?: Maybe<FeeAmountEnabled>;
-  feeAmountEnableds: Array<FeeAmountEnabled>;
-  ownerChanged?: Maybe<OwnerChanged>;
-  ownerChangeds: Array<OwnerChanged>;
-  poolCreated?: Maybe<PoolCreated>;
-  poolCreateds: Array<PoolCreated>;
+  mergedPositions: Array<MergedPosition>;
 };
 
 
@@ -870,60 +864,6 @@ export type QueryprotocolsArgs = {
   subgraphError?: _SubgraphErrorPolicy_;
 };
 
-
-export type QueryfeeAmountEnabledArgs = {
-  id: Scalars['ID']['input'];
-  block?: InputMaybe<Block_height>;
-  subgraphError?: _SubgraphErrorPolicy_;
-};
-
-
-export type QueryfeeAmountEnabledsArgs = {
-  skip?: InputMaybe<Scalars['Int']['input']>;
-  first?: InputMaybe<Scalars['Int']['input']>;
-  orderBy?: InputMaybe<FeeAmountEnabled_orderBy>;
-  orderDirection?: InputMaybe<OrderDirection>;
-  where?: InputMaybe<FeeAmountEnabled_filter>;
-  block?: InputMaybe<Block_height>;
-  subgraphError?: _SubgraphErrorPolicy_;
-};
-
-
-export type QueryownerChangedArgs = {
-  id: Scalars['ID']['input'];
-  block?: InputMaybe<Block_height>;
-  subgraphError?: _SubgraphErrorPolicy_;
-};
-
-
-export type QueryownerChangedsArgs = {
-  skip?: InputMaybe<Scalars['Int']['input']>;
-  first?: InputMaybe<Scalars['Int']['input']>;
-  orderBy?: InputMaybe<OwnerChanged_orderBy>;
-  orderDirection?: InputMaybe<OrderDirection>;
-  where?: InputMaybe<OwnerChanged_filter>;
-  block?: InputMaybe<Block_height>;
-  subgraphError?: _SubgraphErrorPolicy_;
-};
-
-
-export type QuerypoolCreatedArgs = {
-  id: Scalars['ID']['input'];
-  block?: InputMaybe<Block_height>;
-  subgraphError?: _SubgraphErrorPolicy_;
-};
-
-
-export type QuerypoolCreatedsArgs = {
-  skip?: InputMaybe<Scalars['Int']['input']>;
-  first?: InputMaybe<Scalars['Int']['input']>;
-  orderBy?: InputMaybe<PoolCreated_orderBy>;
-  orderDirection?: InputMaybe<OrderDirection>;
-  where?: InputMaybe<PoolCreated_filter>;
-  block?: InputMaybe<Block_height>;
-  subgraphError?: _SubgraphErrorPolicy_;
-};
-
 export type Subscription = {
   factory?: Maybe<Factory>;
   factories: Array<Factory>;
@@ -1007,12 +947,6 @@ export type Subscription = {
   tokenWhitelistSymbols: Array<_TokenWhitelistSymbol>;
   protocol?: Maybe<Protocol>;
   protocols: Array<Protocol>;
-  feeAmountEnabled?: Maybe<FeeAmountEnabled>;
-  feeAmountEnableds: Array<FeeAmountEnabled>;
-  ownerChanged?: Maybe<OwnerChanged>;
-  ownerChangeds: Array<OwnerChanged>;
-  poolCreated?: Maybe<PoolCreated>;
-  poolCreateds: Array<PoolCreated>;
 };
 
 
@@ -1736,60 +1670,6 @@ export type SubscriptionprotocolsArgs = {
   orderBy?: InputMaybe<Protocol_orderBy>;
   orderDirection?: InputMaybe<OrderDirection>;
   where?: InputMaybe<Protocol_filter>;
-  block?: InputMaybe<Block_height>;
-  subgraphError?: _SubgraphErrorPolicy_;
-};
-
-
-export type SubscriptionfeeAmountEnabledArgs = {
-  id: Scalars['ID']['input'];
-  block?: InputMaybe<Block_height>;
-  subgraphError?: _SubgraphErrorPolicy_;
-};
-
-
-export type SubscriptionfeeAmountEnabledsArgs = {
-  skip?: InputMaybe<Scalars['Int']['input']>;
-  first?: InputMaybe<Scalars['Int']['input']>;
-  orderBy?: InputMaybe<FeeAmountEnabled_orderBy>;
-  orderDirection?: InputMaybe<OrderDirection>;
-  where?: InputMaybe<FeeAmountEnabled_filter>;
-  block?: InputMaybe<Block_height>;
-  subgraphError?: _SubgraphErrorPolicy_;
-};
-
-
-export type SubscriptionownerChangedArgs = {
-  id: Scalars['ID']['input'];
-  block?: InputMaybe<Block_height>;
-  subgraphError?: _SubgraphErrorPolicy_;
-};
-
-
-export type SubscriptionownerChangedsArgs = {
-  skip?: InputMaybe<Scalars['Int']['input']>;
-  first?: InputMaybe<Scalars['Int']['input']>;
-  orderBy?: InputMaybe<OwnerChanged_orderBy>;
-  orderDirection?: InputMaybe<OrderDirection>;
-  where?: InputMaybe<OwnerChanged_filter>;
-  block?: InputMaybe<Block_height>;
-  subgraphError?: _SubgraphErrorPolicy_;
-};
-
-
-export type SubscriptionpoolCreatedArgs = {
-  id: Scalars['ID']['input'];
-  block?: InputMaybe<Block_height>;
-  subgraphError?: _SubgraphErrorPolicy_;
-};
-
-
-export type SubscriptionpoolCreatedsArgs = {
-  skip?: InputMaybe<Scalars['Int']['input']>;
-  first?: InputMaybe<Scalars['Int']['input']>;
-  orderBy?: InputMaybe<PoolCreated_orderBy>;
-  orderDirection?: InputMaybe<OrderDirection>;
-  where?: InputMaybe<PoolCreated_filter>;
   block?: InputMaybe<Block_height>;
   subgraphError?: _SubgraphErrorPolicy_;
 };
@@ -12029,273 +11909,11 @@ export type _TokenWhitelist_orderBy =
   | 'id'
   | 'whitelistPools';
 
-export type FeeAmountEnabled = {
-  id: Scalars['Bytes']['output'];
-  fee: Scalars['Int']['output'];
-  tickSpacing: Scalars['Int']['output'];
-  blockNumber: Scalars['BigInt']['output'];
-  blockTimestamp: Scalars['BigInt']['output'];
-  transactionHash: Scalars['Bytes']['output'];
+export type MergedPosition = {
+  id: Scalars['String']['output'];
+  owner: Scalars['String']['output'];
+  liquidity: Scalars['String']['output'];
 };
-
-export type FeeAmountEnabled_filter = {
-  id?: InputMaybe<Scalars['Bytes']['input']>;
-  id_not?: InputMaybe<Scalars['Bytes']['input']>;
-  id_gt?: InputMaybe<Scalars['Bytes']['input']>;
-  id_lt?: InputMaybe<Scalars['Bytes']['input']>;
-  id_gte?: InputMaybe<Scalars['Bytes']['input']>;
-  id_lte?: InputMaybe<Scalars['Bytes']['input']>;
-  id_in?: InputMaybe<Array<Scalars['Bytes']['input']>>;
-  id_not_in?: InputMaybe<Array<Scalars['Bytes']['input']>>;
-  id_contains?: InputMaybe<Scalars['Bytes']['input']>;
-  id_not_contains?: InputMaybe<Scalars['Bytes']['input']>;
-  fee?: InputMaybe<Scalars['Int']['input']>;
-  fee_not?: InputMaybe<Scalars['Int']['input']>;
-  fee_gt?: InputMaybe<Scalars['Int']['input']>;
-  fee_lt?: InputMaybe<Scalars['Int']['input']>;
-  fee_gte?: InputMaybe<Scalars['Int']['input']>;
-  fee_lte?: InputMaybe<Scalars['Int']['input']>;
-  fee_in?: InputMaybe<Array<Scalars['Int']['input']>>;
-  fee_not_in?: InputMaybe<Array<Scalars['Int']['input']>>;
-  tickSpacing?: InputMaybe<Scalars['Int']['input']>;
-  tickSpacing_not?: InputMaybe<Scalars['Int']['input']>;
-  tickSpacing_gt?: InputMaybe<Scalars['Int']['input']>;
-  tickSpacing_lt?: InputMaybe<Scalars['Int']['input']>;
-  tickSpacing_gte?: InputMaybe<Scalars['Int']['input']>;
-  tickSpacing_lte?: InputMaybe<Scalars['Int']['input']>;
-  tickSpacing_in?: InputMaybe<Array<Scalars['Int']['input']>>;
-  tickSpacing_not_in?: InputMaybe<Array<Scalars['Int']['input']>>;
-  blockNumber?: InputMaybe<Scalars['BigInt']['input']>;
-  blockNumber_not?: InputMaybe<Scalars['BigInt']['input']>;
-  blockNumber_gt?: InputMaybe<Scalars['BigInt']['input']>;
-  blockNumber_lt?: InputMaybe<Scalars['BigInt']['input']>;
-  blockNumber_gte?: InputMaybe<Scalars['BigInt']['input']>;
-  blockNumber_lte?: InputMaybe<Scalars['BigInt']['input']>;
-  blockNumber_in?: InputMaybe<Array<Scalars['BigInt']['input']>>;
-  blockNumber_not_in?: InputMaybe<Array<Scalars['BigInt']['input']>>;
-  blockTimestamp?: InputMaybe<Scalars['BigInt']['input']>;
-  blockTimestamp_not?: InputMaybe<Scalars['BigInt']['input']>;
-  blockTimestamp_gt?: InputMaybe<Scalars['BigInt']['input']>;
-  blockTimestamp_lt?: InputMaybe<Scalars['BigInt']['input']>;
-  blockTimestamp_gte?: InputMaybe<Scalars['BigInt']['input']>;
-  blockTimestamp_lte?: InputMaybe<Scalars['BigInt']['input']>;
-  blockTimestamp_in?: InputMaybe<Array<Scalars['BigInt']['input']>>;
-  blockTimestamp_not_in?: InputMaybe<Array<Scalars['BigInt']['input']>>;
-  transactionHash?: InputMaybe<Scalars['Bytes']['input']>;
-  transactionHash_not?: InputMaybe<Scalars['Bytes']['input']>;
-  transactionHash_gt?: InputMaybe<Scalars['Bytes']['input']>;
-  transactionHash_lt?: InputMaybe<Scalars['Bytes']['input']>;
-  transactionHash_gte?: InputMaybe<Scalars['Bytes']['input']>;
-  transactionHash_lte?: InputMaybe<Scalars['Bytes']['input']>;
-  transactionHash_in?: InputMaybe<Array<Scalars['Bytes']['input']>>;
-  transactionHash_not_in?: InputMaybe<Array<Scalars['Bytes']['input']>>;
-  transactionHash_contains?: InputMaybe<Scalars['Bytes']['input']>;
-  transactionHash_not_contains?: InputMaybe<Scalars['Bytes']['input']>;
-  /** Filter for the block changed event. */
-  _change_block?: InputMaybe<BlockChangedFilter>;
-  and?: InputMaybe<Array<InputMaybe<FeeAmountEnabled_filter>>>;
-  or?: InputMaybe<Array<InputMaybe<FeeAmountEnabled_filter>>>;
-};
-
-export type FeeAmountEnabled_orderBy =
-  | 'id'
-  | 'fee'
-  | 'tickSpacing'
-  | 'blockNumber'
-  | 'blockTimestamp'
-  | 'transactionHash';
-
-export type OwnerChanged = {
-  id: Scalars['Bytes']['output'];
-  oldOwner: Scalars['Bytes']['output'];
-  newOwner: Scalars['Bytes']['output'];
-  blockNumber: Scalars['BigInt']['output'];
-  blockTimestamp: Scalars['BigInt']['output'];
-  transactionHash: Scalars['Bytes']['output'];
-};
-
-export type OwnerChanged_filter = {
-  id?: InputMaybe<Scalars['Bytes']['input']>;
-  id_not?: InputMaybe<Scalars['Bytes']['input']>;
-  id_gt?: InputMaybe<Scalars['Bytes']['input']>;
-  id_lt?: InputMaybe<Scalars['Bytes']['input']>;
-  id_gte?: InputMaybe<Scalars['Bytes']['input']>;
-  id_lte?: InputMaybe<Scalars['Bytes']['input']>;
-  id_in?: InputMaybe<Array<Scalars['Bytes']['input']>>;
-  id_not_in?: InputMaybe<Array<Scalars['Bytes']['input']>>;
-  id_contains?: InputMaybe<Scalars['Bytes']['input']>;
-  id_not_contains?: InputMaybe<Scalars['Bytes']['input']>;
-  oldOwner?: InputMaybe<Scalars['Bytes']['input']>;
-  oldOwner_not?: InputMaybe<Scalars['Bytes']['input']>;
-  oldOwner_gt?: InputMaybe<Scalars['Bytes']['input']>;
-  oldOwner_lt?: InputMaybe<Scalars['Bytes']['input']>;
-  oldOwner_gte?: InputMaybe<Scalars['Bytes']['input']>;
-  oldOwner_lte?: InputMaybe<Scalars['Bytes']['input']>;
-  oldOwner_in?: InputMaybe<Array<Scalars['Bytes']['input']>>;
-  oldOwner_not_in?: InputMaybe<Array<Scalars['Bytes']['input']>>;
-  oldOwner_contains?: InputMaybe<Scalars['Bytes']['input']>;
-  oldOwner_not_contains?: InputMaybe<Scalars['Bytes']['input']>;
-  newOwner?: InputMaybe<Scalars['Bytes']['input']>;
-  newOwner_not?: InputMaybe<Scalars['Bytes']['input']>;
-  newOwner_gt?: InputMaybe<Scalars['Bytes']['input']>;
-  newOwner_lt?: InputMaybe<Scalars['Bytes']['input']>;
-  newOwner_gte?: InputMaybe<Scalars['Bytes']['input']>;
-  newOwner_lte?: InputMaybe<Scalars['Bytes']['input']>;
-  newOwner_in?: InputMaybe<Array<Scalars['Bytes']['input']>>;
-  newOwner_not_in?: InputMaybe<Array<Scalars['Bytes']['input']>>;
-  newOwner_contains?: InputMaybe<Scalars['Bytes']['input']>;
-  newOwner_not_contains?: InputMaybe<Scalars['Bytes']['input']>;
-  blockNumber?: InputMaybe<Scalars['BigInt']['input']>;
-  blockNumber_not?: InputMaybe<Scalars['BigInt']['input']>;
-  blockNumber_gt?: InputMaybe<Scalars['BigInt']['input']>;
-  blockNumber_lt?: InputMaybe<Scalars['BigInt']['input']>;
-  blockNumber_gte?: InputMaybe<Scalars['BigInt']['input']>;
-  blockNumber_lte?: InputMaybe<Scalars['BigInt']['input']>;
-  blockNumber_in?: InputMaybe<Array<Scalars['BigInt']['input']>>;
-  blockNumber_not_in?: InputMaybe<Array<Scalars['BigInt']['input']>>;
-  blockTimestamp?: InputMaybe<Scalars['BigInt']['input']>;
-  blockTimestamp_not?: InputMaybe<Scalars['BigInt']['input']>;
-  blockTimestamp_gt?: InputMaybe<Scalars['BigInt']['input']>;
-  blockTimestamp_lt?: InputMaybe<Scalars['BigInt']['input']>;
-  blockTimestamp_gte?: InputMaybe<Scalars['BigInt']['input']>;
-  blockTimestamp_lte?: InputMaybe<Scalars['BigInt']['input']>;
-  blockTimestamp_in?: InputMaybe<Array<Scalars['BigInt']['input']>>;
-  blockTimestamp_not_in?: InputMaybe<Array<Scalars['BigInt']['input']>>;
-  transactionHash?: InputMaybe<Scalars['Bytes']['input']>;
-  transactionHash_not?: InputMaybe<Scalars['Bytes']['input']>;
-  transactionHash_gt?: InputMaybe<Scalars['Bytes']['input']>;
-  transactionHash_lt?: InputMaybe<Scalars['Bytes']['input']>;
-  transactionHash_gte?: InputMaybe<Scalars['Bytes']['input']>;
-  transactionHash_lte?: InputMaybe<Scalars['Bytes']['input']>;
-  transactionHash_in?: InputMaybe<Array<Scalars['Bytes']['input']>>;
-  transactionHash_not_in?: InputMaybe<Array<Scalars['Bytes']['input']>>;
-  transactionHash_contains?: InputMaybe<Scalars['Bytes']['input']>;
-  transactionHash_not_contains?: InputMaybe<Scalars['Bytes']['input']>;
-  /** Filter for the block changed event. */
-  _change_block?: InputMaybe<BlockChangedFilter>;
-  and?: InputMaybe<Array<InputMaybe<OwnerChanged_filter>>>;
-  or?: InputMaybe<Array<InputMaybe<OwnerChanged_filter>>>;
-};
-
-export type OwnerChanged_orderBy =
-  | 'id'
-  | 'oldOwner'
-  | 'newOwner'
-  | 'blockNumber'
-  | 'blockTimestamp'
-  | 'transactionHash';
-
-export type PoolCreated = {
-  id: Scalars['Bytes']['output'];
-  token0: Scalars['Bytes']['output'];
-  token1: Scalars['Bytes']['output'];
-  fee: Scalars['Int']['output'];
-  tickSpacing: Scalars['Int']['output'];
-  pool: Scalars['Bytes']['output'];
-  blockNumber: Scalars['BigInt']['output'];
-  blockTimestamp: Scalars['BigInt']['output'];
-  transactionHash: Scalars['Bytes']['output'];
-};
-
-export type PoolCreated_filter = {
-  id?: InputMaybe<Scalars['Bytes']['input']>;
-  id_not?: InputMaybe<Scalars['Bytes']['input']>;
-  id_gt?: InputMaybe<Scalars['Bytes']['input']>;
-  id_lt?: InputMaybe<Scalars['Bytes']['input']>;
-  id_gte?: InputMaybe<Scalars['Bytes']['input']>;
-  id_lte?: InputMaybe<Scalars['Bytes']['input']>;
-  id_in?: InputMaybe<Array<Scalars['Bytes']['input']>>;
-  id_not_in?: InputMaybe<Array<Scalars['Bytes']['input']>>;
-  id_contains?: InputMaybe<Scalars['Bytes']['input']>;
-  id_not_contains?: InputMaybe<Scalars['Bytes']['input']>;
-  token0?: InputMaybe<Scalars['Bytes']['input']>;
-  token0_not?: InputMaybe<Scalars['Bytes']['input']>;
-  token0_gt?: InputMaybe<Scalars['Bytes']['input']>;
-  token0_lt?: InputMaybe<Scalars['Bytes']['input']>;
-  token0_gte?: InputMaybe<Scalars['Bytes']['input']>;
-  token0_lte?: InputMaybe<Scalars['Bytes']['input']>;
-  token0_in?: InputMaybe<Array<Scalars['Bytes']['input']>>;
-  token0_not_in?: InputMaybe<Array<Scalars['Bytes']['input']>>;
-  token0_contains?: InputMaybe<Scalars['Bytes']['input']>;
-  token0_not_contains?: InputMaybe<Scalars['Bytes']['input']>;
-  token1?: InputMaybe<Scalars['Bytes']['input']>;
-  token1_not?: InputMaybe<Scalars['Bytes']['input']>;
-  token1_gt?: InputMaybe<Scalars['Bytes']['input']>;
-  token1_lt?: InputMaybe<Scalars['Bytes']['input']>;
-  token1_gte?: InputMaybe<Scalars['Bytes']['input']>;
-  token1_lte?: InputMaybe<Scalars['Bytes']['input']>;
-  token1_in?: InputMaybe<Array<Scalars['Bytes']['input']>>;
-  token1_not_in?: InputMaybe<Array<Scalars['Bytes']['input']>>;
-  token1_contains?: InputMaybe<Scalars['Bytes']['input']>;
-  token1_not_contains?: InputMaybe<Scalars['Bytes']['input']>;
-  fee?: InputMaybe<Scalars['Int']['input']>;
-  fee_not?: InputMaybe<Scalars['Int']['input']>;
-  fee_gt?: InputMaybe<Scalars['Int']['input']>;
-  fee_lt?: InputMaybe<Scalars['Int']['input']>;
-  fee_gte?: InputMaybe<Scalars['Int']['input']>;
-  fee_lte?: InputMaybe<Scalars['Int']['input']>;
-  fee_in?: InputMaybe<Array<Scalars['Int']['input']>>;
-  fee_not_in?: InputMaybe<Array<Scalars['Int']['input']>>;
-  tickSpacing?: InputMaybe<Scalars['Int']['input']>;
-  tickSpacing_not?: InputMaybe<Scalars['Int']['input']>;
-  tickSpacing_gt?: InputMaybe<Scalars['Int']['input']>;
-  tickSpacing_lt?: InputMaybe<Scalars['Int']['input']>;
-  tickSpacing_gte?: InputMaybe<Scalars['Int']['input']>;
-  tickSpacing_lte?: InputMaybe<Scalars['Int']['input']>;
-  tickSpacing_in?: InputMaybe<Array<Scalars['Int']['input']>>;
-  tickSpacing_not_in?: InputMaybe<Array<Scalars['Int']['input']>>;
-  pool?: InputMaybe<Scalars['Bytes']['input']>;
-  pool_not?: InputMaybe<Scalars['Bytes']['input']>;
-  pool_gt?: InputMaybe<Scalars['Bytes']['input']>;
-  pool_lt?: InputMaybe<Scalars['Bytes']['input']>;
-  pool_gte?: InputMaybe<Scalars['Bytes']['input']>;
-  pool_lte?: InputMaybe<Scalars['Bytes']['input']>;
-  pool_in?: InputMaybe<Array<Scalars['Bytes']['input']>>;
-  pool_not_in?: InputMaybe<Array<Scalars['Bytes']['input']>>;
-  pool_contains?: InputMaybe<Scalars['Bytes']['input']>;
-  pool_not_contains?: InputMaybe<Scalars['Bytes']['input']>;
-  blockNumber?: InputMaybe<Scalars['BigInt']['input']>;
-  blockNumber_not?: InputMaybe<Scalars['BigInt']['input']>;
-  blockNumber_gt?: InputMaybe<Scalars['BigInt']['input']>;
-  blockNumber_lt?: InputMaybe<Scalars['BigInt']['input']>;
-  blockNumber_gte?: InputMaybe<Scalars['BigInt']['input']>;
-  blockNumber_lte?: InputMaybe<Scalars['BigInt']['input']>;
-  blockNumber_in?: InputMaybe<Array<Scalars['BigInt']['input']>>;
-  blockNumber_not_in?: InputMaybe<Array<Scalars['BigInt']['input']>>;
-  blockTimestamp?: InputMaybe<Scalars['BigInt']['input']>;
-  blockTimestamp_not?: InputMaybe<Scalars['BigInt']['input']>;
-  blockTimestamp_gt?: InputMaybe<Scalars['BigInt']['input']>;
-  blockTimestamp_lt?: InputMaybe<Scalars['BigInt']['input']>;
-  blockTimestamp_gte?: InputMaybe<Scalars['BigInt']['input']>;
-  blockTimestamp_lte?: InputMaybe<Scalars['BigInt']['input']>;
-  blockTimestamp_in?: InputMaybe<Array<Scalars['BigInt']['input']>>;
-  blockTimestamp_not_in?: InputMaybe<Array<Scalars['BigInt']['input']>>;
-  transactionHash?: InputMaybe<Scalars['Bytes']['input']>;
-  transactionHash_not?: InputMaybe<Scalars['Bytes']['input']>;
-  transactionHash_gt?: InputMaybe<Scalars['Bytes']['input']>;
-  transactionHash_lt?: InputMaybe<Scalars['Bytes']['input']>;
-  transactionHash_gte?: InputMaybe<Scalars['Bytes']['input']>;
-  transactionHash_lte?: InputMaybe<Scalars['Bytes']['input']>;
-  transactionHash_in?: InputMaybe<Array<Scalars['Bytes']['input']>>;
-  transactionHash_not_in?: InputMaybe<Array<Scalars['Bytes']['input']>>;
-  transactionHash_contains?: InputMaybe<Scalars['Bytes']['input']>;
-  transactionHash_not_contains?: InputMaybe<Scalars['Bytes']['input']>;
-  /** Filter for the block changed event. */
-  _change_block?: InputMaybe<BlockChangedFilter>;
-  and?: InputMaybe<Array<InputMaybe<PoolCreated_filter>>>;
-  or?: InputMaybe<Array<InputMaybe<PoolCreated_filter>>>;
-};
-
-export type PoolCreated_orderBy =
-  | 'id'
-  | 'token0'
-  | 'token1'
-  | 'fee'
-  | 'tickSpacing'
-  | 'pool'
-  | 'blockNumber'
-  | 'blockTimestamp'
-  | 'transactionHash';
 
 export type WithIndex<TObject> = TObject & Record<string, any>;
 export type ResolversObject<TObject> = WithIndex<TObject>;
@@ -12531,15 +12149,7 @@ export type ResolversTypes = ResolversObject<{
   _TokenWhitelistSymbol_orderBy: _TokenWhitelistSymbol_orderBy;
   _TokenWhitelist_filter: _TokenWhitelist_filter;
   _TokenWhitelist_orderBy: _TokenWhitelist_orderBy;
-  FeeAmountEnabled: ResolverTypeWrapper<FeeAmountEnabled>;
-  FeeAmountEnabled_filter: FeeAmountEnabled_filter;
-  FeeAmountEnabled_orderBy: FeeAmountEnabled_orderBy;
-  OwnerChanged: ResolverTypeWrapper<OwnerChanged>;
-  OwnerChanged_filter: OwnerChanged_filter;
-  OwnerChanged_orderBy: OwnerChanged_orderBy;
-  PoolCreated: ResolverTypeWrapper<PoolCreated>;
-  PoolCreated_filter: PoolCreated_filter;
-  PoolCreated_orderBy: PoolCreated_orderBy;
+  MergedPosition: ResolverTypeWrapper<MergedPosition>;
 }>;
 
 /** Mapping between all available schema types and the resolvers parents */
@@ -12640,12 +12250,7 @@ export type ResolversParentTypes = ResolversObject<{
   _TokenWhitelistSymbol: _TokenWhitelistSymbol;
   _TokenWhitelistSymbol_filter: _TokenWhitelistSymbol_filter;
   _TokenWhitelist_filter: _TokenWhitelist_filter;
-  FeeAmountEnabled: FeeAmountEnabled;
-  FeeAmountEnabled_filter: FeeAmountEnabled_filter;
-  OwnerChanged: OwnerChanged;
-  OwnerChanged_filter: OwnerChanged_filter;
-  PoolCreated: PoolCreated;
-  PoolCreated_filter: PoolCreated_filter;
+  MergedPosition: MergedPosition;
 }>;
 
 export type entityDirectiveArgs = { };
@@ -12746,12 +12351,7 @@ export type QueryResolvers<ContextType = MeshContext, ParentType extends Resolve
   tokenWhitelistSymbols?: Resolver<Array<ResolversTypes['_TokenWhitelistSymbol']>, ParentType, ContextType, RequireFields<QuerytokenWhitelistSymbolsArgs, 'skip' | 'first' | 'subgraphError'>>;
   protocol?: Resolver<Maybe<ResolversTypes['Protocol']>, ParentType, ContextType, RequireFields<QueryprotocolArgs, 'id' | 'subgraphError'>>;
   protocols?: Resolver<Array<ResolversTypes['Protocol']>, ParentType, ContextType, RequireFields<QueryprotocolsArgs, 'skip' | 'first' | 'subgraphError'>>;
-  feeAmountEnabled?: Resolver<Maybe<ResolversTypes['FeeAmountEnabled']>, ParentType, ContextType, RequireFields<QueryfeeAmountEnabledArgs, 'id' | 'subgraphError'>>;
-  feeAmountEnableds?: Resolver<Array<ResolversTypes['FeeAmountEnabled']>, ParentType, ContextType, RequireFields<QueryfeeAmountEnabledsArgs, 'skip' | 'first' | 'subgraphError'>>;
-  ownerChanged?: Resolver<Maybe<ResolversTypes['OwnerChanged']>, ParentType, ContextType, RequireFields<QueryownerChangedArgs, 'id' | 'subgraphError'>>;
-  ownerChangeds?: Resolver<Array<ResolversTypes['OwnerChanged']>, ParentType, ContextType, RequireFields<QueryownerChangedsArgs, 'skip' | 'first' | 'subgraphError'>>;
-  poolCreated?: Resolver<Maybe<ResolversTypes['PoolCreated']>, ParentType, ContextType, RequireFields<QuerypoolCreatedArgs, 'id' | 'subgraphError'>>;
-  poolCreateds?: Resolver<Array<ResolversTypes['PoolCreated']>, ParentType, ContextType, RequireFields<QuerypoolCreatedsArgs, 'skip' | 'first' | 'subgraphError'>>;
+  mergedPositions?: Resolver<Array<ResolversTypes['MergedPosition']>, ParentType, ContextType>;
 }>;
 
 export type SubscriptionResolvers<ContextType = MeshContext, ParentType extends ResolversParentTypes['Subscription'] = ResolversParentTypes['Subscription']> = ResolversObject<{
@@ -12836,12 +12436,6 @@ export type SubscriptionResolvers<ContextType = MeshContext, ParentType extends 
   tokenWhitelistSymbols?: SubscriptionResolver<Array<ResolversTypes['_TokenWhitelistSymbol']>, "tokenWhitelistSymbols", ParentType, ContextType, RequireFields<SubscriptiontokenWhitelistSymbolsArgs, 'skip' | 'first' | 'subgraphError'>>;
   protocol?: SubscriptionResolver<Maybe<ResolversTypes['Protocol']>, "protocol", ParentType, ContextType, RequireFields<SubscriptionprotocolArgs, 'id' | 'subgraphError'>>;
   protocols?: SubscriptionResolver<Array<ResolversTypes['Protocol']>, "protocols", ParentType, ContextType, RequireFields<SubscriptionprotocolsArgs, 'skip' | 'first' | 'subgraphError'>>;
-  feeAmountEnabled?: SubscriptionResolver<Maybe<ResolversTypes['FeeAmountEnabled']>, "feeAmountEnabled", ParentType, ContextType, RequireFields<SubscriptionfeeAmountEnabledArgs, 'id' | 'subgraphError'>>;
-  feeAmountEnableds?: SubscriptionResolver<Array<ResolversTypes['FeeAmountEnabled']>, "feeAmountEnableds", ParentType, ContextType, RequireFields<SubscriptionfeeAmountEnabledsArgs, 'skip' | 'first' | 'subgraphError'>>;
-  ownerChanged?: SubscriptionResolver<Maybe<ResolversTypes['OwnerChanged']>, "ownerChanged", ParentType, ContextType, RequireFields<SubscriptionownerChangedArgs, 'id' | 'subgraphError'>>;
-  ownerChangeds?: SubscriptionResolver<Array<ResolversTypes['OwnerChanged']>, "ownerChangeds", ParentType, ContextType, RequireFields<SubscriptionownerChangedsArgs, 'skip' | 'first' | 'subgraphError'>>;
-  poolCreated?: SubscriptionResolver<Maybe<ResolversTypes['PoolCreated']>, "poolCreated", ParentType, ContextType, RequireFields<SubscriptionpoolCreatedArgs, 'id' | 'subgraphError'>>;
-  poolCreateds?: SubscriptionResolver<Array<ResolversTypes['PoolCreated']>, "poolCreateds", ParentType, ContextType, RequireFields<SubscriptionpoolCreatedsArgs, 'skip' | 'first' | 'subgraphError'>>;
 }>;
 
 export interface BigDecimalScalarConfig extends GraphQLScalarTypeConfig<ResolversTypes['BigDecimal'], any> {
@@ -13723,36 +13317,10 @@ export type _TokenWhitelistSymbolResolvers<ContextType = MeshContext, ParentType
   __isTypeOf?: IsTypeOfResolverFn<ParentType, ContextType>;
 }>;
 
-export type FeeAmountEnabledResolvers<ContextType = MeshContext, ParentType extends ResolversParentTypes['FeeAmountEnabled'] = ResolversParentTypes['FeeAmountEnabled']> = ResolversObject<{
-  id?: Resolver<ResolversTypes['Bytes'], ParentType, ContextType>;
-  fee?: Resolver<ResolversTypes['Int'], ParentType, ContextType>;
-  tickSpacing?: Resolver<ResolversTypes['Int'], ParentType, ContextType>;
-  blockNumber?: Resolver<ResolversTypes['BigInt'], ParentType, ContextType>;
-  blockTimestamp?: Resolver<ResolversTypes['BigInt'], ParentType, ContextType>;
-  transactionHash?: Resolver<ResolversTypes['Bytes'], ParentType, ContextType>;
-  __isTypeOf?: IsTypeOfResolverFn<ParentType, ContextType>;
-}>;
-
-export type OwnerChangedResolvers<ContextType = MeshContext, ParentType extends ResolversParentTypes['OwnerChanged'] = ResolversParentTypes['OwnerChanged']> = ResolversObject<{
-  id?: Resolver<ResolversTypes['Bytes'], ParentType, ContextType>;
-  oldOwner?: Resolver<ResolversTypes['Bytes'], ParentType, ContextType>;
-  newOwner?: Resolver<ResolversTypes['Bytes'], ParentType, ContextType>;
-  blockNumber?: Resolver<ResolversTypes['BigInt'], ParentType, ContextType>;
-  blockTimestamp?: Resolver<ResolversTypes['BigInt'], ParentType, ContextType>;
-  transactionHash?: Resolver<ResolversTypes['Bytes'], ParentType, ContextType>;
-  __isTypeOf?: IsTypeOfResolverFn<ParentType, ContextType>;
-}>;
-
-export type PoolCreatedResolvers<ContextType = MeshContext, ParentType extends ResolversParentTypes['PoolCreated'] = ResolversParentTypes['PoolCreated']> = ResolversObject<{
-  id?: Resolver<ResolversTypes['Bytes'], ParentType, ContextType>;
-  token0?: Resolver<ResolversTypes['Bytes'], ParentType, ContextType>;
-  token1?: Resolver<ResolversTypes['Bytes'], ParentType, ContextType>;
-  fee?: Resolver<ResolversTypes['Int'], ParentType, ContextType>;
-  tickSpacing?: Resolver<ResolversTypes['Int'], ParentType, ContextType>;
-  pool?: Resolver<ResolversTypes['Bytes'], ParentType, ContextType>;
-  blockNumber?: Resolver<ResolversTypes['BigInt'], ParentType, ContextType>;
-  blockTimestamp?: Resolver<ResolversTypes['BigInt'], ParentType, ContextType>;
-  transactionHash?: Resolver<ResolversTypes['Bytes'], ParentType, ContextType>;
+export type MergedPositionResolvers<ContextType = MeshContext, ParentType extends ResolversParentTypes['MergedPosition'] = ResolversParentTypes['MergedPosition']> = ResolversObject<{
+  id?: Resolver<ResolversTypes['String'], ParentType, ContextType>;
+  owner?: Resolver<ResolversTypes['String'], ParentType, ContextType>;
+  liquidity?: Resolver<ResolversTypes['String'], ParentType, ContextType>;
   __isTypeOf?: IsTypeOfResolverFn<ParentType, ContextType>;
 }>;
 
@@ -13806,9 +13374,7 @@ export type Resolvers<ContextType = MeshContext> = ResolversObject<{
   _LiquidityPoolAmount?: _LiquidityPoolAmountResolvers<ContextType>;
   _TokenWhitelist?: _TokenWhitelistResolvers<ContextType>;
   _TokenWhitelistSymbol?: _TokenWhitelistSymbolResolvers<ContextType>;
-  FeeAmountEnabled?: FeeAmountEnabledResolvers<ContextType>;
-  OwnerChanged?: OwnerChangedResolvers<ContextType>;
-  PoolCreated?: PoolCreatedResolvers<ContextType>;
+  MergedPosition?: MergedPositionResolvers<ContextType>;
 }>;
 
 export type DirectiveResolvers<ContextType = MeshContext> = ResolversObject<{
@@ -13817,7 +13383,7 @@ export type DirectiveResolvers<ContextType = MeshContext> = ResolversObject<{
   derivedFrom?: derivedFromDirectiveResolver<any, any, ContextType>;
 }>;
 
-export type MeshContext = UniswapV3MainnetTypes.Context & UniswapV3BaseTypes.Context & SushiswapV3MainnetTypes.Context & SushiswapV3BaseTypes.Context & BaseMeshContext;
+export type MeshContext = UniswapV3mainnetTypes.Context & UniswapV3BaseTypes.Context & SushiswapV3MainnetTypes.Context & BaseMeshContext;
 
 
 const baseDir = pathModule.join(typeof __dirname === 'string' ? __dirname : '/', '..');
@@ -13825,17 +13391,14 @@ const baseDir = pathModule.join(typeof __dirname === 'string' ? __dirname : '/',
 const importFn: ImportFn = <T>(moduleId: string) => {
   const relativeModuleId = (pathModule.isAbsolute(moduleId) ? pathModule.relative(baseDir, moduleId) : moduleId).split('\\').join('/').replace(baseDir + '/', '');
   switch(relativeModuleId) {
-    case ".graphclient/sources/sushiswap-v3-base/introspectionSchema":
+    case ".graphclient/sources/uniswapV3mainnet/introspectionSchema":
       return Promise.resolve(importedModule$0) as T;
     
-    case ".graphclient/sources/uniswap-v3-mainnet/introspectionSchema":
+    case ".graphclient/sources/uniswap-v3-base/introspectionSchema":
       return Promise.resolve(importedModule$1) as T;
     
-    case ".graphclient/sources/uniswap-v3-base/introspectionSchema":
+    case ".graphclient/sources/sushiswapV3Mainnet/introspectionSchema":
       return Promise.resolve(importedModule$2) as T;
-    
-    case ".graphclient/sources/sushiswap-v3-mainnet/introspectionSchema":
-      return Promise.resolve(importedModule$3) as T;
     
     default:
       return Promise.reject(new Error(`Cannot find module '${relativeModuleId}'.`));
@@ -13867,19 +13430,17 @@ const cache = new (MeshCache as any)({
 const sources: MeshResolvedSource[] = [];
 const transforms: MeshTransform[] = [];
 const additionalEnvelopPlugins: MeshPlugin<any>[] = [];
-const uniswapV3MainnetTransforms = [];
+const uniswapV3mainnetTransforms = [];
 const uniswapV3BaseTransforms = [];
 const sushiswapV3MainnetTransforms = [];
-const sushiswapV3BaseTransforms = [];
-const additionalTypeDefs = [] as any[];
-const uniswapV3MainnetHandler = new GraphqlHandler({
-              name: "uniswap-v3-mainnet",
+const uniswapV3mainnetHandler = new GraphqlHandler({
+              name: "uniswapV3mainnet",
               config: {"endpoint":"https://gateway.thegraph.com/api/2a28cd14b329c86348e703de95458d4a/subgraphs/id/5zvR82QoaXYFyDEKLZ9t6v9adgnptxYpKpSbxtgVENFV"},
               baseDir,
               cache,
               pubsub,
-              store: sourcesStore.child("uniswap-v3-mainnet"),
-              logger: logger.child("uniswap-v3-mainnet"),
+              store: sourcesStore.child("uniswapV3mainnet"),
+              logger: logger.child("uniswapV3mainnet"),
               importFn,
             });
 const uniswapV3BaseHandler = new GraphqlHandler({
@@ -13893,29 +13454,19 @@ const uniswapV3BaseHandler = new GraphqlHandler({
               importFn,
             });
 const sushiswapV3MainnetHandler = new GraphqlHandler({
-              name: "sushiswap-v3-mainnet",
+              name: "sushiswapV3Mainnet",
               config: {"endpoint":"https://gateway.thegraph.com/api/2a28cd14b329c86348e703de95458d4a/subgraphs/id/2tGWMrDha4164KkFAfkU3rDCtuxGb4q1emXmFdLLzJ8x"},
               baseDir,
               cache,
               pubsub,
-              store: sourcesStore.child("sushiswap-v3-mainnet"),
-              logger: logger.child("sushiswap-v3-mainnet"),
-              importFn,
-            });
-const sushiswapV3BaseHandler = new GraphqlHandler({
-              name: "sushiswap-v3-base",
-              config: {"endpoint":"https://gateway.thegraph.com/api/2a28cd14b329c86348e703de95458d4a/subgraphs/id/9KSiDKQ3KnwyxU5yA1KkGbqF4uREHVfmUcrLyjS4itSY"},
-              baseDir,
-              cache,
-              pubsub,
-              store: sourcesStore.child("sushiswap-v3-base"),
-              logger: logger.child("sushiswap-v3-base"),
+              store: sourcesStore.child("sushiswapV3Mainnet"),
+              logger: logger.child("sushiswapV3Mainnet"),
               importFn,
             });
 sources[0] = {
-          name: 'uniswap-v3-mainnet',
-          handler: uniswapV3MainnetHandler,
-          transforms: uniswapV3MainnetTransforms
+          name: 'uniswapV3mainnet',
+          handler: uniswapV3mainnetHandler,
+          transforms: uniswapV3mainnetTransforms
         }
 sources[1] = {
           name: 'uniswap-v3-base',
@@ -13923,16 +13474,15 @@ sources[1] = {
           transforms: uniswapV3BaseTransforms
         }
 sources[2] = {
-          name: 'sushiswap-v3-mainnet',
+          name: 'sushiswapV3Mainnet',
           handler: sushiswapV3MainnetHandler,
           transforms: sushiswapV3MainnetTransforms
         }
-sources[3] = {
-          name: 'sushiswap-v3-base',
-          handler: sushiswapV3BaseHandler,
-          transforms: sushiswapV3BaseTransforms
-        }
-const additionalResolvers = [] as any[]
+const additionalTypeDefs = [parse("type MergedPosition {\n  id: String!\n  owner: String!\n  liquidity: String!\n}\n\nextend type Query {\n  mergedPositions: [MergedPosition!]!\n}"),] as any[];
+const additionalResolvers = await Promise.all([
+        import("../src/resolvers/positions.ts")
+            .then(m => m.resolvers || m.default || m)
+      ]);
 const merger = new(StitchingMerger as any)({
         cache,
         pubsub,
@@ -13940,12 +13490,11 @@ const merger = new(StitchingMerger as any)({
         store: rootStore.child('stitchingMerger')
       })
 const documentHashMap = {
-        "9fee6c8165f4d78ca70b5bdc2185c0553895d7bb4e660ab48d923bc45b8dbab0": GetHighLiquiditySushiswapPositionsDocument,
-"9fee6c8165f4d78ca70b5bdc2185c0553895d7bb4e660ab48d923bc45b8dbab0": GetActiveAccountsDocument,
-"9fee6c8165f4d78ca70b5bdc2185c0553895d7bb4e660ab48d923bc45b8dbab0": GetProtocolStatsDocument,
-"0ff27a90e4d0197875476215ab48bb1fbf8174d2085eae53991759b909b59cd4": GetHighLiquidityUniswapPoolsDocument,
-"0ff27a90e4d0197875476215ab48bb1fbf8174d2085eae53991759b909b59cd4": GetPositionsDocument,
-"0ff27a90e4d0197875476215ab48bb1fbf8174d2085eae53991759b909b59cd4": GetUniswapMetricsDocument
+        "ef8bf03e2cf59a987c837663a925f988f45f94dc19b3d26015bbd5b35ef0c98a": GetSushiswapPositionsDocument,
+"61e2e772c37500f50dfe00af7b4b895da1bcee2ba1296073a448bb8446f8420f": GetMergedPositionsDocument,
+"a4b16850e524c781b004ef7e51ee356ae58cf8b8206dcdad219bfd5b0eeb8107": GetHighLiquidityUniswapPoolsDocument,
+"a4b16850e524c781b004ef7e51ee356ae58cf8b8206dcdad219bfd5b0eeb8107": GetUniswapPositionsDocument,
+"a4b16850e524c781b004ef7e51ee356ae58cf8b8206dcdad219bfd5b0eeb8107": GetUniswapMetricsDocument
       }
 additionalEnvelopPlugins.push(usePersistedOperations({
         getPersistedOperation(key) {
@@ -13967,47 +13516,40 @@ additionalEnvelopPlugins.push(usePersistedOperations({
     get documents() {
       return [
       {
-        document: GetHighLiquiditySushiswapPositionsDocument,
+        document: GetSushiswapPositionsDocument,
         get rawSDL() {
-          return printWithCache(GetHighLiquiditySushiswapPositionsDocument);
+          return printWithCache(GetSushiswapPositionsDocument);
         },
-        location: 'GetHighLiquiditySushiswapPositionsDocument.graphql',
-        sha256Hash: '9fee6c8165f4d78ca70b5bdc2185c0553895d7bb4e660ab48d923bc45b8dbab0'
+        location: 'GetSushiswapPositionsDocument.graphql',
+        sha256Hash: 'ef8bf03e2cf59a987c837663a925f988f45f94dc19b3d26015bbd5b35ef0c98a'
       },{
-        document: GetActiveAccountsDocument,
+        document: GetMergedPositionsDocument,
         get rawSDL() {
-          return printWithCache(GetActiveAccountsDocument);
+          return printWithCache(GetMergedPositionsDocument);
         },
-        location: 'GetActiveAccountsDocument.graphql',
-        sha256Hash: '9fee6c8165f4d78ca70b5bdc2185c0553895d7bb4e660ab48d923bc45b8dbab0'
-      },{
-        document: GetProtocolStatsDocument,
-        get rawSDL() {
-          return printWithCache(GetProtocolStatsDocument);
-        },
-        location: 'GetProtocolStatsDocument.graphql',
-        sha256Hash: '9fee6c8165f4d78ca70b5bdc2185c0553895d7bb4e660ab48d923bc45b8dbab0'
+        location: 'GetMergedPositionsDocument.graphql',
+        sha256Hash: '61e2e772c37500f50dfe00af7b4b895da1bcee2ba1296073a448bb8446f8420f'
       },{
         document: GetHighLiquidityUniswapPoolsDocument,
         get rawSDL() {
           return printWithCache(GetHighLiquidityUniswapPoolsDocument);
         },
         location: 'GetHighLiquidityUniswapPoolsDocument.graphql',
-        sha256Hash: '0ff27a90e4d0197875476215ab48bb1fbf8174d2085eae53991759b909b59cd4'
+        sha256Hash: 'a4b16850e524c781b004ef7e51ee356ae58cf8b8206dcdad219bfd5b0eeb8107'
       },{
-        document: GetPositionsDocument,
+        document: GetUniswapPositionsDocument,
         get rawSDL() {
-          return printWithCache(GetPositionsDocument);
+          return printWithCache(GetUniswapPositionsDocument);
         },
-        location: 'GetPositionsDocument.graphql',
-        sha256Hash: '0ff27a90e4d0197875476215ab48bb1fbf8174d2085eae53991759b909b59cd4'
+        location: 'GetUniswapPositionsDocument.graphql',
+        sha256Hash: 'a4b16850e524c781b004ef7e51ee356ae58cf8b8206dcdad219bfd5b0eeb8107'
       },{
         document: GetUniswapMetricsDocument,
         get rawSDL() {
           return printWithCache(GetUniswapMetricsDocument);
         },
         location: 'GetUniswapMetricsDocument.graphql',
-        sha256Hash: '0ff27a90e4d0197875476215ab48bb1fbf8174d2085eae53991759b909b59cd4'
+        sha256Hash: 'a4b16850e524c781b004ef7e51ee356ae58cf8b8206dcdad219bfd5b0eeb8107'
       }
     ];
     },
@@ -14062,23 +13604,18 @@ export function getBuiltGraphSDK<TGlobalContext = any, TOperationContext = any>(
   const sdkRequester$ = getBuiltGraphClient().then(({ sdkRequesterFactory }) => sdkRequesterFactory(globalContext));
   return getSdk<TOperationContext, TGlobalContext>((...args) => sdkRequester$.then(sdkRequester => sdkRequester(...args)));
 }
-export type GetHighLiquiditySushiswapPositionsQueryVariables = Exact<{ [key: string]: never; }>;
+export type GetMergedPositionsQueryVariables = Exact<{ [key: string]: never; }>;
 
 
-export type GetHighLiquiditySushiswapPositionsQuery = { liquidityPools: Array<(
-    Pick<LiquidityPool, 'id' | 'totalValueLockedUSD' | 'inputTokenBalances'>
-    & { inputTokens: Array<Pick<Token, 'id' | 'symbol' | 'decimals'>>, dailySnapshots: Array<Pick<LiquidityPoolDailySnapshot, 'dailyVolumeUSD' | 'dailyVolumeByTokenAmount' | 'dailyVolumeByTokenUSD'>> }
+export type GetMergedPositionsQuery = { mergedPositions: Array<Pick<MergedPosition, 'id' | 'owner' | 'liquidity'>> };
+
+export type GetSushiswapPositionsQueryVariables = Exact<{ [key: string]: never; }>;
+
+
+export type GetSushiswapPositionsQuery = { positions: Array<(
+    Pick<Position, 'id' | 'liquidity'>
+    & { account: Pick<Account, 'id'> }
   )> };
-
-export type GetActiveAccountsQueryVariables = Exact<{ [key: string]: never; }>;
-
-
-export type GetActiveAccountsQuery = { accounts: Array<Pick<Account, 'id' | 'positionCount' | 'depositCount' | 'withdrawCount' | 'swapCount'>> };
-
-export type GetProtocolStatsQueryVariables = Exact<{ [key: string]: never; }>;
-
-
-export type GetProtocolStatsQuery = { protocols: Array<Pick<DexAmmProtocol, 'totalValueLockedUSD' | 'totalPoolCount' | 'cumulativeVolumeUSD' | 'id'>> };
 
 export type GetHighLiquidityUniswapPoolsQueryVariables = Exact<{ [key: string]: never; }>;
 
@@ -14088,10 +13625,10 @@ export type GetHighLiquidityUniswapPoolsQuery = { pools: Array<(
     & { token0: Pick<Token, 'id' | 'symbol' | 'decimals'>, token1: Pick<Token, 'id' | 'symbol' | 'decimals'>, poolHourData: Array<Pick<PoolHourData, 'periodStartUnix' | 'volumeUSD' | 'tvlUSD'>> }
   )> };
 
-export type GetPositionsQueryVariables = Exact<{ [key: string]: never; }>;
+export type GetUniswapPositionsQueryVariables = Exact<{ [key: string]: never; }>;
 
 
-export type GetPositionsQuery = { positions: Array<Pick<Position, 'id' | 'owner' | 'liquidity' | 'liquidityUSD'>> };
+export type GetUniswapPositionsQuery = { positions: Array<Pick<Position, 'id' | 'owner' | 'liquidity'>> };
 
 export type GetUniswapMetricsQueryVariables = Exact<{ [key: string]: never; }>;
 
@@ -14099,58 +13636,31 @@ export type GetUniswapMetricsQueryVariables = Exact<{ [key: string]: never; }>;
 export type GetUniswapMetricsQuery = { factories: Array<Pick<Factory, 'id' | 'poolCount' | 'totalValueLockedUSD' | 'totalFeesUSD'>>, bundles: Array<Pick<Bundle, 'ethPriceUSD'>> };
 
 
-export const GetHighLiquiditySushiswapPositionsDocument = gql`
-    query GetHighLiquiditySushiswapPositions {
-  liquidityPools(
+export const GetMergedPositionsDocument = gql`
+    query GetMergedPositions {
+  mergedPositions {
+    id
+    owner
+    liquidity
+  }
+}
+    ` as unknown as DocumentNode<GetMergedPositionsQuery, GetMergedPositionsQueryVariables>;
+export const GetSushiswapPositionsDocument = gql`
+    query GetSushiswapPositions {
+  positions(
     first: 100
-    orderBy: totalValueLockedUSD
+    orderBy: liquidity
     orderDirection: desc
-    where: {totalValueLockedUSD_gt: "1000000"}
+    where: {liquidity_gt: "0"}
   ) {
     id
-    totalValueLockedUSD
-    inputTokens {
+    account {
       id
-      symbol
-      decimals
     }
-    inputTokenBalances
-    dailySnapshots(first: 1, orderBy: timestamp, orderDirection: desc) {
-      dailyVolumeUSD
-      dailyVolumeByTokenAmount
-      dailyVolumeByTokenUSD
-    }
+    liquidity
   }
 }
-    ` as unknown as DocumentNode<GetHighLiquiditySushiswapPositionsQuery, GetHighLiquiditySushiswapPositionsQueryVariables>;
-export const GetActiveAccountsDocument = gql`
-    query GetActiveAccounts {
-  accounts(
-    first: 100
-    orderBy: positionCount
-    orderDirection: desc
-    where: {positionCount_gt: 0}
-  ) {
-    id
-    positionCount
-    depositCount
-    withdrawCount
-    swapCount
-  }
-}
-    ` as unknown as DocumentNode<GetActiveAccountsQuery, GetActiveAccountsQueryVariables>;
-export const GetProtocolStatsDocument = gql`
-    query GetProtocolStats {
-  protocols {
-    id
-    ... on DexAmmProtocol {
-      totalValueLockedUSD
-      totalPoolCount
-      cumulativeVolumeUSD
-    }
-  }
-}
-    ` as unknown as DocumentNode<GetProtocolStatsQuery, GetProtocolStatsQueryVariables>;
+    ` as unknown as DocumentNode<GetSushiswapPositionsQuery, GetSushiswapPositionsQueryVariables>;
 export const GetHighLiquidityUniswapPoolsDocument = gql`
     query GetHighLiquidityUniswapPools {
   pools(
@@ -14185,8 +13695,8 @@ export const GetHighLiquidityUniswapPoolsDocument = gql`
   }
 }
     ` as unknown as DocumentNode<GetHighLiquidityUniswapPoolsQuery, GetHighLiquidityUniswapPoolsQueryVariables>;
-export const GetPositionsDocument = gql`
-    query GetPositions {
+export const GetUniswapPositionsDocument = gql`
+    query GetUniswapPositions {
   positions(
     first: 100
     orderBy: liquidity
@@ -14196,10 +13706,9 @@ export const GetPositionsDocument = gql`
     id
     owner
     liquidity
-    liquidityUSD
   }
 }
-    ` as unknown as DocumentNode<GetPositionsQuery, GetPositionsQueryVariables>;
+    ` as unknown as DocumentNode<GetUniswapPositionsQuery, GetUniswapPositionsQueryVariables>;
 export const GetUniswapMetricsDocument = gql`
     query GetUniswapMetrics {
   factories(first: 1) {
@@ -14219,24 +13728,20 @@ export const GetUniswapMetricsDocument = gql`
 
 
 
-
 export type Requester<C = {}, E = unknown> = <R, V>(doc: DocumentNode, vars?: V, options?: C) => Promise<R> | AsyncIterable<R>
 export function getSdk<C, E>(requester: Requester<C, E>) {
   return {
-    GetHighLiquiditySushiswapPositions(variables?: GetHighLiquiditySushiswapPositionsQueryVariables, options?: C): Promise<GetHighLiquiditySushiswapPositionsQuery> {
-      return requester<GetHighLiquiditySushiswapPositionsQuery, GetHighLiquiditySushiswapPositionsQueryVariables>(GetHighLiquiditySushiswapPositionsDocument, variables, options) as Promise<GetHighLiquiditySushiswapPositionsQuery>;
+    GetMergedPositions(variables?: GetMergedPositionsQueryVariables, options?: C): Promise<GetMergedPositionsQuery> {
+      return requester<GetMergedPositionsQuery, GetMergedPositionsQueryVariables>(GetMergedPositionsDocument, variables, options) as Promise<GetMergedPositionsQuery>;
     },
-    GetActiveAccounts(variables?: GetActiveAccountsQueryVariables, options?: C): Promise<GetActiveAccountsQuery> {
-      return requester<GetActiveAccountsQuery, GetActiveAccountsQueryVariables>(GetActiveAccountsDocument, variables, options) as Promise<GetActiveAccountsQuery>;
-    },
-    GetProtocolStats(variables?: GetProtocolStatsQueryVariables, options?: C): Promise<GetProtocolStatsQuery> {
-      return requester<GetProtocolStatsQuery, GetProtocolStatsQueryVariables>(GetProtocolStatsDocument, variables, options) as Promise<GetProtocolStatsQuery>;
+    GetSushiswapPositions(variables?: GetSushiswapPositionsQueryVariables, options?: C): Promise<GetSushiswapPositionsQuery> {
+      return requester<GetSushiswapPositionsQuery, GetSushiswapPositionsQueryVariables>(GetSushiswapPositionsDocument, variables, options) as Promise<GetSushiswapPositionsQuery>;
     },
     GetHighLiquidityUniswapPools(variables?: GetHighLiquidityUniswapPoolsQueryVariables, options?: C): Promise<GetHighLiquidityUniswapPoolsQuery> {
       return requester<GetHighLiquidityUniswapPoolsQuery, GetHighLiquidityUniswapPoolsQueryVariables>(GetHighLiquidityUniswapPoolsDocument, variables, options) as Promise<GetHighLiquidityUniswapPoolsQuery>;
     },
-    GetPositions(variables?: GetPositionsQueryVariables, options?: C): Promise<GetPositionsQuery> {
-      return requester<GetPositionsQuery, GetPositionsQueryVariables>(GetPositionsDocument, variables, options) as Promise<GetPositionsQuery>;
+    GetUniswapPositions(variables?: GetUniswapPositionsQueryVariables, options?: C): Promise<GetUniswapPositionsQuery> {
+      return requester<GetUniswapPositionsQuery, GetUniswapPositionsQueryVariables>(GetUniswapPositionsDocument, variables, options) as Promise<GetUniswapPositionsQuery>;
     },
     GetUniswapMetrics(variables?: GetUniswapMetricsQueryVariables, options?: C): Promise<GetUniswapMetricsQuery> {
       return requester<GetUniswapMetricsQuery, GetUniswapMetricsQueryVariables>(GetUniswapMetricsDocument, variables, options) as Promise<GetUniswapMetricsQuery>;
