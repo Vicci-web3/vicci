@@ -1059,6 +1059,84 @@ type Query {
     """
     subgraphError: _SubgraphErrorPolicy_! = deny
   ): [Protocol!]!
+  increaseEvent(
+    id: ID!
+    """
+    The block at which the query should be executed. Can either be a `{ hash: Bytes }` value containing a block hash, a `{ number: Int }` containing the block number, or a `{ number_gte: Int }` containing the minimum block number. In the case of `number_gte`, the query will be executed on the latest block only if the subgraph has progressed to or past the minimum block number. Defaults to the latest block when omitted.
+    """
+    block: Block_height
+    """
+    Set to `allow` to receive data even if the subgraph has skipped over errors while syncing.
+    """
+    subgraphError: _SubgraphErrorPolicy_! = deny
+  ): IncreaseEvent
+  increaseEvents(
+    skip: Int = 0
+    first: Int = 100
+    orderBy: IncreaseEvent_orderBy
+    orderDirection: OrderDirection
+    where: IncreaseEvent_filter
+    """
+    The block at which the query should be executed. Can either be a `{ hash: Bytes }` value containing a block hash, a `{ number: Int }` containing the block number, or a `{ number_gte: Int }` containing the minimum block number. In the case of `number_gte`, the query will be executed on the latest block only if the subgraph has progressed to or past the minimum block number. Defaults to the latest block when omitted.
+    """
+    block: Block_height
+    """
+    Set to `allow` to receive data even if the subgraph has skipped over errors while syncing.
+    """
+    subgraphError: _SubgraphErrorPolicy_! = deny
+  ): [IncreaseEvent!]!
+  decreaseEvent(
+    id: ID!
+    """
+    The block at which the query should be executed. Can either be a `{ hash: Bytes }` value containing a block hash, a `{ number: Int }` containing the block number, or a `{ number_gte: Int }` containing the minimum block number. In the case of `number_gte`, the query will be executed on the latest block only if the subgraph has progressed to or past the minimum block number. Defaults to the latest block when omitted.
+    """
+    block: Block_height
+    """
+    Set to `allow` to receive data even if the subgraph has skipped over errors while syncing.
+    """
+    subgraphError: _SubgraphErrorPolicy_! = deny
+  ): DecreaseEvent
+  decreaseEvents(
+    skip: Int = 0
+    first: Int = 100
+    orderBy: DecreaseEvent_orderBy
+    orderDirection: OrderDirection
+    where: DecreaseEvent_filter
+    """
+    The block at which the query should be executed. Can either be a `{ hash: Bytes }` value containing a block hash, a `{ number: Int }` containing the block number, or a `{ number_gte: Int }` containing the minimum block number. In the case of `number_gte`, the query will be executed on the latest block only if the subgraph has progressed to or past the minimum block number. Defaults to the latest block when omitted.
+    """
+    block: Block_height
+    """
+    Set to `allow` to receive data even if the subgraph has skipped over errors while syncing.
+    """
+    subgraphError: _SubgraphErrorPolicy_! = deny
+  ): [DecreaseEvent!]!
+  setProtocolFeeEvent(
+    id: ID!
+    """
+    The block at which the query should be executed. Can either be a `{ hash: Bytes }` value containing a block hash, a `{ number: Int }` containing the block number, or a `{ number_gte: Int }` containing the minimum block number. In the case of `number_gte`, the query will be executed on the latest block only if the subgraph has progressed to or past the minimum block number. Defaults to the latest block when omitted.
+    """
+    block: Block_height
+    """
+    Set to `allow` to receive data even if the subgraph has skipped over errors while syncing.
+    """
+    subgraphError: _SubgraphErrorPolicy_! = deny
+  ): SetProtocolFeeEvent
+  setProtocolFeeEvents(
+    skip: Int = 0
+    first: Int = 100
+    orderBy: SetProtocolFeeEvent_orderBy
+    orderDirection: OrderDirection
+    where: SetProtocolFeeEvent_filter
+    """
+    The block at which the query should be executed. Can either be a `{ hash: Bytes }` value containing a block hash, a `{ number: Int }` containing the block number, or a `{ number_gte: Int }` containing the minimum block number. In the case of `number_gte`, the query will be executed on the latest block only if the subgraph has progressed to or past the minimum block number. Defaults to the latest block when omitted.
+    """
+    block: Block_height
+    """
+    Set to `allow` to receive data even if the subgraph has skipped over errors while syncing.
+    """
+    subgraphError: _SubgraphErrorPolicy_! = deny
+  ): [SetProtocolFeeEvent!]!
   mergedPositions: [MergedPosition!]!
 }
 
@@ -2105,6 +2183,84 @@ type Subscription {
     """
     subgraphError: _SubgraphErrorPolicy_! = deny
   ): [Protocol!]!
+  increaseEvent(
+    id: ID!
+    """
+    The block at which the query should be executed. Can either be a `{ hash: Bytes }` value containing a block hash, a `{ number: Int }` containing the block number, or a `{ number_gte: Int }` containing the minimum block number. In the case of `number_gte`, the query will be executed on the latest block only if the subgraph has progressed to or past the minimum block number. Defaults to the latest block when omitted.
+    """
+    block: Block_height
+    """
+    Set to `allow` to receive data even if the subgraph has skipped over errors while syncing.
+    """
+    subgraphError: _SubgraphErrorPolicy_! = deny
+  ): IncreaseEvent
+  increaseEvents(
+    skip: Int = 0
+    first: Int = 100
+    orderBy: IncreaseEvent_orderBy
+    orderDirection: OrderDirection
+    where: IncreaseEvent_filter
+    """
+    The block at which the query should be executed. Can either be a `{ hash: Bytes }` value containing a block hash, a `{ number: Int }` containing the block number, or a `{ number_gte: Int }` containing the minimum block number. In the case of `number_gte`, the query will be executed on the latest block only if the subgraph has progressed to or past the minimum block number. Defaults to the latest block when omitted.
+    """
+    block: Block_height
+    """
+    Set to `allow` to receive data even if the subgraph has skipped over errors while syncing.
+    """
+    subgraphError: _SubgraphErrorPolicy_! = deny
+  ): [IncreaseEvent!]!
+  decreaseEvent(
+    id: ID!
+    """
+    The block at which the query should be executed. Can either be a `{ hash: Bytes }` value containing a block hash, a `{ number: Int }` containing the block number, or a `{ number_gte: Int }` containing the minimum block number. In the case of `number_gte`, the query will be executed on the latest block only if the subgraph has progressed to or past the minimum block number. Defaults to the latest block when omitted.
+    """
+    block: Block_height
+    """
+    Set to `allow` to receive data even if the subgraph has skipped over errors while syncing.
+    """
+    subgraphError: _SubgraphErrorPolicy_! = deny
+  ): DecreaseEvent
+  decreaseEvents(
+    skip: Int = 0
+    first: Int = 100
+    orderBy: DecreaseEvent_orderBy
+    orderDirection: OrderDirection
+    where: DecreaseEvent_filter
+    """
+    The block at which the query should be executed. Can either be a `{ hash: Bytes }` value containing a block hash, a `{ number: Int }` containing the block number, or a `{ number_gte: Int }` containing the minimum block number. In the case of `number_gte`, the query will be executed on the latest block only if the subgraph has progressed to or past the minimum block number. Defaults to the latest block when omitted.
+    """
+    block: Block_height
+    """
+    Set to `allow` to receive data even if the subgraph has skipped over errors while syncing.
+    """
+    subgraphError: _SubgraphErrorPolicy_! = deny
+  ): [DecreaseEvent!]!
+  setProtocolFeeEvent(
+    id: ID!
+    """
+    The block at which the query should be executed. Can either be a `{ hash: Bytes }` value containing a block hash, a `{ number: Int }` containing the block number, or a `{ number_gte: Int }` containing the minimum block number. In the case of `number_gte`, the query will be executed on the latest block only if the subgraph has progressed to or past the minimum block number. Defaults to the latest block when omitted.
+    """
+    block: Block_height
+    """
+    Set to `allow` to receive data even if the subgraph has skipped over errors while syncing.
+    """
+    subgraphError: _SubgraphErrorPolicy_! = deny
+  ): SetProtocolFeeEvent
+  setProtocolFeeEvents(
+    skip: Int = 0
+    first: Int = 100
+    orderBy: SetProtocolFeeEvent_orderBy
+    orderDirection: OrderDirection
+    where: SetProtocolFeeEvent_filter
+    """
+    The block at which the query should be executed. Can either be a `{ hash: Bytes }` value containing a block hash, a `{ number: Int }` containing the block number, or a `{ number_gte: Int }` containing the minimum block number. In the case of `number_gte`, the query will be executed on the latest block only if the subgraph has progressed to or past the minimum block number. Defaults to the latest block when omitted.
+    """
+    block: Block_height
+    """
+    Set to `allow` to receive data even if the subgraph has skipped over errors while syncing.
+    """
+    subgraphError: _SubgraphErrorPolicy_! = deny
+  ): [SetProtocolFeeEvent!]!
 }
 
 enum Aggregation_interval {
@@ -2438,6 +2594,7 @@ enum Burn_orderBy {
   tickLower
   tickUpper
   logIndex
+  pool__isProtocolFeeEnabled
 }
 
 scalar Bytes
@@ -2623,6 +2780,7 @@ enum Collect_orderBy {
   tickLower
   tickUpper
   logIndex
+  pool__isProtocolFeeEnabled
 }
 
 type Factory {
@@ -2961,6 +3119,7 @@ enum Flash_orderBy {
   amount0Paid
   amount1Paid
   logIndex
+  pool__isProtocolFeeEnabled
 }
 
 """
@@ -3260,6 +3419,7 @@ enum Mint_orderBy {
   tickLower
   tickUpper
   logIndex
+  pool__isProtocolFeeEnabled
 }
 
 """Defines the order direction, either ascending or descending"""
@@ -3305,6 +3465,7 @@ type Pool {
   swaps(skip: Int = 0, first: Int = 100, orderBy: Swap_orderBy, orderDirection: OrderDirection, where: Swap_filter): [Swap!]!
   collects(skip: Int = 0, first: Int = 100, orderBy: Collect_orderBy, orderDirection: OrderDirection, where: Collect_filter): [Collect!]!
   ticks(skip: Int = 0, first: Int = 100, orderBy: Tick_orderBy, orderDirection: OrderDirection, where: Tick_filter): [Tick!]!
+  isProtocolFeeEnabled: Boolean!
 }
 
 type PoolDayData {
@@ -3558,6 +3719,7 @@ enum PoolDayData_orderBy {
   high
   low
   close
+  pool__isProtocolFeeEnabled
 }
 
 type PoolHourData {
@@ -3811,6 +3973,7 @@ enum PoolHourData_orderBy {
   high
   low
   close
+  pool__isProtocolFeeEnabled
 }
 
 input Pool_filter {
@@ -4083,6 +4246,10 @@ input Pool_filter {
   _change_block: BlockChangedFilter
   and: [Pool_filter]
   or: [Pool_filter]
+  isProtocolFeeEnabled: Boolean
+  isProtocolFeeEnabled_not: Boolean
+  isProtocolFeeEnabled_in: [Boolean!]
+  isProtocolFeeEnabled_not_in: [Boolean!]
 }
 
 enum Pool_orderBy {
@@ -4152,21 +4319,17 @@ enum Pool_orderBy {
   swaps
   collects
   ticks
+  isProtocolFeeEnabled
 }
 
 type Position {
-  """ { Account address }-{ Market address }-{ Count } """
-  id: Bytes!
+  id: ID!
   owner: Bytes!
-  """ The liquidity pool in which this position was opened """
-  pool: LiquidityPool!
+  pool: Pool!
   token0: Token!
   token1: Token!
-  """ lower tick of the position """
-  tickLower: Tick
-  """ upper tick of the position """
-  tickUpper: Tick
-  """ total position liquidity """
+  tickLower: Tick!
+  tickUpper: Tick!
   liquidity: BigInt!
   depositedToken0: BigDecimal!
   depositedToken1: BigDecimal!
@@ -4219,21 +4382,21 @@ type Position {
   withdraws(skip: Int = 0, first: Int = 100, orderBy: Withdraw_orderBy, orderDirection: OrderDirection, where: Withdraw_filter): [Withdraw!]!
   """ Position daily snapshots for open positions """
   snapshots(skip: Int = 0, first: Int = 100, orderBy: PositionSnapshot_orderBy, orderDirection: OrderDirection, where: PositionSnapshot_filter): [PositionSnapshot!]!
+  amountDepositedUSD: BigDecimal!
+  amountWithdrawnUSD: BigDecimal!
+  amountCollectedUSD: BigDecimal!
+  increaseEvents(skip: Int = 0, first: Int = 100, orderBy: IncreaseEvent_orderBy, orderDirection: OrderDirection, where: IncreaseEvent_filter): [IncreaseEvent!]!
+  decreaseEvents(skip: Int = 0, first: Int = 100, orderBy: IncreaseEvent_orderBy, orderDirection: OrderDirection, where: IncreaseEvent_filter): [IncreaseEvent!]!
 }
 
 type PositionSnapshot {
-  """ { Position ID }-{ Transaction hash }-{ Log index } """
-  id: Bytes!
+  id: ID!
   owner: Bytes!
   pool: Pool!
-  """ Position of this snapshot """
   position: Position!
-  """ Block number of this snapshot """
   blockNumber: BigInt!
-  """ Timestamp of this snapshot """
   timestamp: BigInt!
-  """ total position liquidity """
-  liquidity: BigInt
+  liquidity: BigInt!
   depositedToken0: BigDecimal!
   depositedToken1: BigDecimal!
   withdrawnToken0: BigDecimal!
@@ -4274,14 +4437,14 @@ type PositionSnapshot {
 }
 
 input PositionSnapshot_filter {
-  id: Bytes
-  id_not: Bytes
-  id_gt: Bytes
-  id_lt: Bytes
-  id_gte: Bytes
-  id_lte: Bytes
-  id_in: [Bytes!]
-  id_not_in: [Bytes!]
+  id: ID
+  id_not: ID
+  id_gt: ID
+  id_lt: ID
+  id_gte: ID
+  id_lte: ID
+  id_in: [ID!]
+  id_not_in: [ID!]
   owner: Bytes
   owner_not: Bytes
   owner_gt: Bytes
@@ -4632,17 +4795,21 @@ enum PositionSnapshot_orderBy {
   cumulativeRewardUSD
   depositCount
   withdrawCount
+  pool__isProtocolFeeEnabled
+  position__amountDepositedUSD
+  position__amountWithdrawnUSD
+  position__amountCollectedUSD
 }
 
 input Position_filter {
-  id: Bytes
-  id_not: Bytes
-  id_gt: Bytes
-  id_lt: Bytes
-  id_gte: Bytes
-  id_lte: Bytes
-  id_in: [Bytes!]
-  id_not_in: [Bytes!]
+  id: ID
+  id_not: ID
+  id_gt: ID
+  id_lt: ID
+  id_gte: ID
+  id_lte: ID
+  id_in: [ID!]
+  id_not_in: [ID!]
   owner: Bytes
   owner_not: Bytes
   owner_gt: Bytes
@@ -4673,7 +4840,7 @@ input Position_filter {
   pool_ends_with_nocase: String
   pool_not_ends_with: String
   pool_not_ends_with_nocase: String
-  pool_: LiquidityPool_filter
+  pool_: Pool_filter
   token0: String
   token0_not: String
   token0_gt: String
@@ -5032,6 +5199,32 @@ input Position_filter {
   withdrawCount_not_in: [Int!]
   withdraws_: Withdraw_filter
   snapshots_: PositionSnapshot_filter
+  amountDepositedUSD: BigDecimal
+  amountDepositedUSD_not: BigDecimal
+  amountDepositedUSD_gt: BigDecimal
+  amountDepositedUSD_lt: BigDecimal
+  amountDepositedUSD_gte: BigDecimal
+  amountDepositedUSD_lte: BigDecimal
+  amountDepositedUSD_in: [BigDecimal!]
+  amountDepositedUSD_not_in: [BigDecimal!]
+  amountWithdrawnUSD: BigDecimal
+  amountWithdrawnUSD_not: BigDecimal
+  amountWithdrawnUSD_gt: BigDecimal
+  amountWithdrawnUSD_lt: BigDecimal
+  amountWithdrawnUSD_gte: BigDecimal
+  amountWithdrawnUSD_lte: BigDecimal
+  amountWithdrawnUSD_in: [BigDecimal!]
+  amountWithdrawnUSD_not_in: [BigDecimal!]
+  amountCollectedUSD: BigDecimal
+  amountCollectedUSD_not: BigDecimal
+  amountCollectedUSD_gt: BigDecimal
+  amountCollectedUSD_lt: BigDecimal
+  amountCollectedUSD_gte: BigDecimal
+  amountCollectedUSD_lte: BigDecimal
+  amountCollectedUSD_in: [BigDecimal!]
+  amountCollectedUSD_not_in: [BigDecimal!]
+  increaseEvents_: IncreaseEvent_filter
+  decreaseEvents_: IncreaseEvent_filter
 }
 
 enum Position_orderBy {
@@ -5237,16 +5430,19 @@ enum Position_orderBy {
   withdrawCount
   withdraws
   snapshots
+  pool__isProtocolFeeEnabled
+  amountDepositedUSD
+  amountWithdrawnUSD
+  amountCollectedUSD
+  increaseEvents
+  decreaseEvents
 }
 
 type Swap {
-  """ { Transaction hash }-{ Log index } """
-  id: Bytes!
+  id: ID!
   transaction: Transaction!
-  """ Timestamp of this event """
   timestamp: BigInt!
-  """ The pool involving this event """
-  pool: LiquidityPool!
+  pool: Pool!
   token0: Token!
   token1: Token!
   sender: Bytes!
@@ -5256,11 +5452,8 @@ type Swap {
   amount1: BigDecimal!
   amountUSD: BigDecimal!
   sqrtPriceX96: BigInt!
-  """ the tick after the swap """
-  tick: BigInt
-  """ Event log index. For transactions that don't emit event, create arbitrary index starting from 0 
-  """
-  logIndex: Int!
+  tick: BigInt!
+  logIndex: BigInt
   """ Transaction hash of the transaction that emitted this event """
   hash: Bytes!
   """ Nonce of the transaction that emitted this event """
@@ -5295,14 +5488,14 @@ type Swap {
 }
 
 input Swap_filter {
-  id: Bytes
-  id_not: Bytes
-  id_gt: Bytes
-  id_lt: Bytes
-  id_gte: Bytes
-  id_lte: Bytes
-  id_in: [Bytes!]
-  id_not_in: [Bytes!]
+  id: ID
+  id_not: ID
+  id_gt: ID
+  id_lt: ID
+  id_gte: ID
+  id_lte: ID
+  id_in: [ID!]
+  id_not_in: [ID!]
   transaction: String
   transaction_not: String
   transaction_gt: String
@@ -5352,7 +5545,7 @@ input Swap_filter {
   pool_ends_with_nocase: String
   pool_not_ends_with: String
   pool_not_ends_with_nocase: String
-  pool_: LiquidityPool_filter
+  pool_: Pool_filter
   token0: String
   token0_not: String
   token0_gt: String
@@ -5465,14 +5658,14 @@ input Swap_filter {
   tick_lte: BigInt
   tick_in: [BigInt!]
   tick_not_in: [BigInt!]
-  logIndex: Int
-  logIndex_not: Int
-  logIndex_gt: Int
-  logIndex_lt: Int
-  logIndex_gte: Int
-  logIndex_lte: Int
-  logIndex_in: [Int!]
-  logIndex_not_in: [Int!]
+  logIndex: BigInt
+  logIndex_not: BigInt
+  logIndex_gt: BigInt
+  logIndex_lt: BigInt
+  logIndex_gte: BigInt
+  logIndex_lte: BigInt
+  logIndex_in: [BigInt!]
+  logIndex_not_in: [BigInt!]
   """Filter for the block changed event."""
   _change_block: BlockChangedFilter
   and: [Swap_filter]
@@ -5828,18 +6021,15 @@ enum Swap_orderBy {
   amountOut
   amountOutUSD
   reserveAmounts
+  pool__isProtocolFeeEnabled
 }
 
 type Tick {
-  """ { pool address }-{ tick index } """
-  id: Bytes!
+  id: ID!
   poolAddress: String
   tickIdx: BigInt!
-  """ Liquidity pool this tick belongs to """
-  pool: LiquidityPool!
-  """ total liquidity pool has as tick lower or upper """
+  pool: Pool!
   liquidityGross: BigInt!
-  """ how much liquidity changes when tick crossed """
   liquidityNet: BigInt!
   price0: BigDecimal!
   price1: BigDecimal!
@@ -6082,6 +6272,7 @@ enum TickDayData_orderBy {
   feesUSD
   feeGrowthOutside0X128
   feeGrowthOutside1X128
+  pool__isProtocolFeeEnabled
 }
 
 type TickHourData {
@@ -6268,17 +6459,18 @@ enum TickHourData_orderBy {
   volumeToken1
   volumeUSD
   feesUSD
+  pool__isProtocolFeeEnabled
 }
 
 input Tick_filter {
-  id: Bytes
-  id_not: Bytes
-  id_gt: Bytes
-  id_lt: Bytes
-  id_gte: Bytes
-  id_lte: Bytes
-  id_in: [Bytes!]
-  id_not_in: [Bytes!]
+  id: ID
+  id_not: ID
+  id_gt: ID
+  id_lt: ID
+  id_gte: ID
+  id_lte: ID
+  id_in: [ID!]
+  id_not_in: [ID!]
   poolAddress: String
   poolAddress_not: String
   poolAddress_gt: String
@@ -6327,7 +6519,7 @@ input Tick_filter {
   pool_ends_with_nocase: String
   pool_not_ends_with: String
   pool_not_ends_with_nocase: String
-  pool_: LiquidityPool_filter
+  pool_: Pool_filter
   liquidityGross: BigInt
   liquidityGross_not: BigInt
   liquidityGross_gt: BigInt
@@ -6634,6 +6826,7 @@ enum Tick_orderBy {
   lastSnapshotHourID
   lastUpdateTimestamp
   lastUpdateBlockNumber
+  pool__isProtocolFeeEnabled
 }
 
 """
@@ -6643,14 +6836,10 @@ A string representation of microseconds UNIX timestamp (16 digits)
 scalar Timestamp
 
 type Token {
-  """ Smart contract address of the token """
-  id: Bytes!
-  """ Symbol of the token, mirrored from the smart contract """
+  id: ID!
   symbol: String!
-  """ Name of the token, mirrored from the smart contract """
   name: String!
-  """ The number of decimal places this token uses, default to 18 """
-  decimals: Int!
+  decimals: BigInt!
   totalSupply: BigInt!
   volume: BigDecimal!
   volumeUSD: BigDecimal!
@@ -7042,14 +7231,14 @@ enum TokenHourData_orderBy {
 }
 
 input Token_filter {
-  id: Bytes
-  id_not: Bytes
-  id_gt: Bytes
-  id_lt: Bytes
-  id_gte: Bytes
-  id_lte: Bytes
-  id_in: [Bytes!]
-  id_not_in: [Bytes!]
+  id: ID
+  id_not: ID
+  id_gt: ID
+  id_lt: ID
+  id_gte: ID
+  id_lte: ID
+  id_in: [ID!]
+  id_not_in: [ID!]
   symbol: String
   symbol_not: String
   symbol_gt: String
@@ -7090,14 +7279,14 @@ input Token_filter {
   name_ends_with_nocase: String
   name_not_ends_with: String
   name_not_ends_with_nocase: String
-  decimals: Int
-  decimals_not: Int
-  decimals_gt: Int
-  decimals_lt: Int
-  decimals_gte: Int
-  decimals_lte: Int
-  decimals_in: [Int!]
-  decimals_not_in: [Int!]
+  decimals: BigInt
+  decimals_not: BigInt
+  decimals_gt: BigInt
+  decimals_lt: BigInt
+  decimals_gte: BigInt
+  decimals_lte: BigInt
+  decimals_in: [BigInt!]
+  decimals_not_in: [BigInt!]
   totalSupply: BigInt
   totalSupply_not: BigInt
   totalSupply_gt: BigInt
@@ -7293,11 +7482,11 @@ type Transaction {
   timestamp: BigInt!
   gasUsed: BigInt!
   gasPrice: BigInt!
-  mints(skip: Int = 0, first: Int = 100, orderBy: Mint_orderBy, orderDirection: OrderDirection, where: Mint_filter): [Mint]!
-  burns(skip: Int = 0, first: Int = 100, orderBy: Burn_orderBy, orderDirection: OrderDirection, where: Burn_filter): [Burn]!
-  swaps(skip: Int = 0, first: Int = 100, orderBy: Swap_orderBy, orderDirection: OrderDirection, where: Swap_filter): [Swap]!
-  flashed(skip: Int = 0, first: Int = 100, orderBy: Flash_orderBy, orderDirection: OrderDirection, where: Flash_filter): [Flash]!
-  collects(skip: Int = 0, first: Int = 100, orderBy: Collect_orderBy, orderDirection: OrderDirection, where: Collect_filter): [Collect]!
+  mints(skip: Int = 0, first: Int = 100, orderBy: Mint_orderBy, orderDirection: OrderDirection, where: Mint_filter): [Mint!]!
+  burns(skip: Int = 0, first: Int = 100, orderBy: Burn_orderBy, orderDirection: OrderDirection, where: Burn_filter): [Burn!]!
+  swaps(skip: Int = 0, first: Int = 100, orderBy: Swap_orderBy, orderDirection: OrderDirection, where: Swap_filter): [Swap!]!
+  flashed(skip: Int = 0, first: Int = 100, orderBy: Flash_orderBy, orderDirection: OrderDirection, where: Flash_filter): [Flash!]!
+  collects(skip: Int = 0, first: Int = 100, orderBy: Collect_orderBy, orderDirection: OrderDirection, where: Collect_filter): [Collect!]!
 }
 
 input Transaction_filter {
@@ -12162,6 +12351,654 @@ input _TokenWhitelist_filter {
 enum _TokenWhitelist_orderBy {
   id
   whitelistPools
+}
+
+type DecreaseEvent {
+  id: ID!
+  pool: Pool!
+  tokenID: BigInt!
+  position: Position!
+  amount0: BigInt!
+  amount1: BigInt!
+  token0: Token!
+  token1: Token!
+  timeStamp: BigInt!
+  transaction: Transaction!
+}
+
+input DecreaseEvent_filter {
+  id: ID
+  id_not: ID
+  id_gt: ID
+  id_lt: ID
+  id_gte: ID
+  id_lte: ID
+  id_in: [ID!]
+  id_not_in: [ID!]
+  pool: String
+  pool_not: String
+  pool_gt: String
+  pool_lt: String
+  pool_gte: String
+  pool_lte: String
+  pool_in: [String!]
+  pool_not_in: [String!]
+  pool_contains: String
+  pool_contains_nocase: String
+  pool_not_contains: String
+  pool_not_contains_nocase: String
+  pool_starts_with: String
+  pool_starts_with_nocase: String
+  pool_not_starts_with: String
+  pool_not_starts_with_nocase: String
+  pool_ends_with: String
+  pool_ends_with_nocase: String
+  pool_not_ends_with: String
+  pool_not_ends_with_nocase: String
+  pool_: Pool_filter
+  tokenID: BigInt
+  tokenID_not: BigInt
+  tokenID_gt: BigInt
+  tokenID_lt: BigInt
+  tokenID_gte: BigInt
+  tokenID_lte: BigInt
+  tokenID_in: [BigInt!]
+  tokenID_not_in: [BigInt!]
+  position: String
+  position_not: String
+  position_gt: String
+  position_lt: String
+  position_gte: String
+  position_lte: String
+  position_in: [String!]
+  position_not_in: [String!]
+  position_contains: String
+  position_contains_nocase: String
+  position_not_contains: String
+  position_not_contains_nocase: String
+  position_starts_with: String
+  position_starts_with_nocase: String
+  position_not_starts_with: String
+  position_not_starts_with_nocase: String
+  position_ends_with: String
+  position_ends_with_nocase: String
+  position_not_ends_with: String
+  position_not_ends_with_nocase: String
+  position_: Position_filter
+  amount0: BigInt
+  amount0_not: BigInt
+  amount0_gt: BigInt
+  amount0_lt: BigInt
+  amount0_gte: BigInt
+  amount0_lte: BigInt
+  amount0_in: [BigInt!]
+  amount0_not_in: [BigInt!]
+  amount1: BigInt
+  amount1_not: BigInt
+  amount1_gt: BigInt
+  amount1_lt: BigInt
+  amount1_gte: BigInt
+  amount1_lte: BigInt
+  amount1_in: [BigInt!]
+  amount1_not_in: [BigInt!]
+  token0: String
+  token0_not: String
+  token0_gt: String
+  token0_lt: String
+  token0_gte: String
+  token0_lte: String
+  token0_in: [String!]
+  token0_not_in: [String!]
+  token0_contains: String
+  token0_contains_nocase: String
+  token0_not_contains: String
+  token0_not_contains_nocase: String
+  token0_starts_with: String
+  token0_starts_with_nocase: String
+  token0_not_starts_with: String
+  token0_not_starts_with_nocase: String
+  token0_ends_with: String
+  token0_ends_with_nocase: String
+  token0_not_ends_with: String
+  token0_not_ends_with_nocase: String
+  token0_: Token_filter
+  token1: String
+  token1_not: String
+  token1_gt: String
+  token1_lt: String
+  token1_gte: String
+  token1_lte: String
+  token1_in: [String!]
+  token1_not_in: [String!]
+  token1_contains: String
+  token1_contains_nocase: String
+  token1_not_contains: String
+  token1_not_contains_nocase: String
+  token1_starts_with: String
+  token1_starts_with_nocase: String
+  token1_not_starts_with: String
+  token1_not_starts_with_nocase: String
+  token1_ends_with: String
+  token1_ends_with_nocase: String
+  token1_not_ends_with: String
+  token1_not_ends_with_nocase: String
+  token1_: Token_filter
+  timeStamp: BigInt
+  timeStamp_not: BigInt
+  timeStamp_gt: BigInt
+  timeStamp_lt: BigInt
+  timeStamp_gte: BigInt
+  timeStamp_lte: BigInt
+  timeStamp_in: [BigInt!]
+  timeStamp_not_in: [BigInt!]
+  transaction: String
+  transaction_not: String
+  transaction_gt: String
+  transaction_lt: String
+  transaction_gte: String
+  transaction_lte: String
+  transaction_in: [String!]
+  transaction_not_in: [String!]
+  transaction_contains: String
+  transaction_contains_nocase: String
+  transaction_not_contains: String
+  transaction_not_contains_nocase: String
+  transaction_starts_with: String
+  transaction_starts_with_nocase: String
+  transaction_not_starts_with: String
+  transaction_not_starts_with_nocase: String
+  transaction_ends_with: String
+  transaction_ends_with_nocase: String
+  transaction_not_ends_with: String
+  transaction_not_ends_with_nocase: String
+  transaction_: Transaction_filter
+  """Filter for the block changed event."""
+  _change_block: BlockChangedFilter
+  and: [DecreaseEvent_filter]
+  or: [DecreaseEvent_filter]
+}
+
+enum DecreaseEvent_orderBy {
+  id
+  pool
+  pool__id
+  pool__createdAtTimestamp
+  pool__createdAtBlockNumber
+  pool__feeTier
+  pool__liquidity
+  pool__sqrtPrice
+  pool__feeGrowthGlobal0X128
+  pool__feeGrowthGlobal1X128
+  pool__token0Price
+  pool__token1Price
+  pool__tick
+  pool__observationIndex
+  pool__volumeToken0
+  pool__volumeToken1
+  pool__volumeUSD
+  pool__untrackedVolumeUSD
+  pool__feesUSD
+  pool__txCount
+  pool__collectedFeesToken0
+  pool__collectedFeesToken1
+  pool__collectedFeesUSD
+  pool__totalValueLockedToken0
+  pool__totalValueLockedToken1
+  pool__totalValueLockedETH
+  pool__totalValueLockedUSD
+  pool__totalValueLockedUSDUntracked
+  pool__isProtocolFeeEnabled
+  pool__liquidityProviderCount
+  tokenID
+  position
+  position__id
+  position__owner
+  position__liquidity
+  position__depositedToken0
+  position__depositedToken1
+  position__withdrawnToken0
+  position__withdrawnToken1
+  position__collectedToken0
+  position__collectedToken1
+  position__collectedFeesToken0
+  position__collectedFeesToken1
+  position__amountDepositedUSD
+  position__amountWithdrawnUSD
+  position__amountCollectedUSD
+  position__feeGrowthInside0LastX128
+  position__feeGrowthInside1LastX128
+  amount0
+  amount1
+  token0
+  token0__id
+  token0__symbol
+  token0__name
+  token0__decimals
+  token0__totalSupply
+  token0__volume
+  token0__volumeUSD
+  token0__untrackedVolumeUSD
+  token0__feesUSD
+  token0__txCount
+  token0__poolCount
+  token0__totalValueLocked
+  token0__totalValueLockedUSD
+  token0__totalValueLockedUSDUntracked
+  token0__derivedETH
+  token1
+  token1__id
+  token1__symbol
+  token1__name
+  token1__decimals
+  token1__totalSupply
+  token1__volume
+  token1__volumeUSD
+  token1__untrackedVolumeUSD
+  token1__feesUSD
+  token1__txCount
+  token1__poolCount
+  token1__totalValueLocked
+  token1__totalValueLockedUSD
+  token1__totalValueLockedUSDUntracked
+  token1__derivedETH
+  timeStamp
+  transaction
+  transaction__id
+  transaction__blockNumber
+  transaction__timestamp
+  transaction__gasUsed
+  transaction__gasPrice
+}
+
+type IncreaseEvent {
+  id: ID!
+  pool: Pool!
+  tokenID: BigInt!
+  position: Position!
+  amount0: BigInt!
+  amount1: BigInt!
+  token0: Token!
+  token1: Token!
+  timeStamp: BigInt!
+  transaction: Transaction!
+}
+
+input IncreaseEvent_filter {
+  id: ID
+  id_not: ID
+  id_gt: ID
+  id_lt: ID
+  id_gte: ID
+  id_lte: ID
+  id_in: [ID!]
+  id_not_in: [ID!]
+  pool: String
+  pool_not: String
+  pool_gt: String
+  pool_lt: String
+  pool_gte: String
+  pool_lte: String
+  pool_in: [String!]
+  pool_not_in: [String!]
+  pool_contains: String
+  pool_contains_nocase: String
+  pool_not_contains: String
+  pool_not_contains_nocase: String
+  pool_starts_with: String
+  pool_starts_with_nocase: String
+  pool_not_starts_with: String
+  pool_not_starts_with_nocase: String
+  pool_ends_with: String
+  pool_ends_with_nocase: String
+  pool_not_ends_with: String
+  pool_not_ends_with_nocase: String
+  pool_: Pool_filter
+  tokenID: BigInt
+  tokenID_not: BigInt
+  tokenID_gt: BigInt
+  tokenID_lt: BigInt
+  tokenID_gte: BigInt
+  tokenID_lte: BigInt
+  tokenID_in: [BigInt!]
+  tokenID_not_in: [BigInt!]
+  position: String
+  position_not: String
+  position_gt: String
+  position_lt: String
+  position_gte: String
+  position_lte: String
+  position_in: [String!]
+  position_not_in: [String!]
+  position_contains: String
+  position_contains_nocase: String
+  position_not_contains: String
+  position_not_contains_nocase: String
+  position_starts_with: String
+  position_starts_with_nocase: String
+  position_not_starts_with: String
+  position_not_starts_with_nocase: String
+  position_ends_with: String
+  position_ends_with_nocase: String
+  position_not_ends_with: String
+  position_not_ends_with_nocase: String
+  position_: Position_filter
+  amount0: BigInt
+  amount0_not: BigInt
+  amount0_gt: BigInt
+  amount0_lt: BigInt
+  amount0_gte: BigInt
+  amount0_lte: BigInt
+  amount0_in: [BigInt!]
+  amount0_not_in: [BigInt!]
+  amount1: BigInt
+  amount1_not: BigInt
+  amount1_gt: BigInt
+  amount1_lt: BigInt
+  amount1_gte: BigInt
+  amount1_lte: BigInt
+  amount1_in: [BigInt!]
+  amount1_not_in: [BigInt!]
+  token0: String
+  token0_not: String
+  token0_gt: String
+  token0_lt: String
+  token0_gte: String
+  token0_lte: String
+  token0_in: [String!]
+  token0_not_in: [String!]
+  token0_contains: String
+  token0_contains_nocase: String
+  token0_not_contains: String
+  token0_not_contains_nocase: String
+  token0_starts_with: String
+  token0_starts_with_nocase: String
+  token0_not_starts_with: String
+  token0_not_starts_with_nocase: String
+  token0_ends_with: String
+  token0_ends_with_nocase: String
+  token0_not_ends_with: String
+  token0_not_ends_with_nocase: String
+  token0_: Token_filter
+  token1: String
+  token1_not: String
+  token1_gt: String
+  token1_lt: String
+  token1_gte: String
+  token1_lte: String
+  token1_in: [String!]
+  token1_not_in: [String!]
+  token1_contains: String
+  token1_contains_nocase: String
+  token1_not_contains: String
+  token1_not_contains_nocase: String
+  token1_starts_with: String
+  token1_starts_with_nocase: String
+  token1_not_starts_with: String
+  token1_not_starts_with_nocase: String
+  token1_ends_with: String
+  token1_ends_with_nocase: String
+  token1_not_ends_with: String
+  token1_not_ends_with_nocase: String
+  token1_: Token_filter
+  timeStamp: BigInt
+  timeStamp_not: BigInt
+  timeStamp_gt: BigInt
+  timeStamp_lt: BigInt
+  timeStamp_gte: BigInt
+  timeStamp_lte: BigInt
+  timeStamp_in: [BigInt!]
+  timeStamp_not_in: [BigInt!]
+  transaction: String
+  transaction_not: String
+  transaction_gt: String
+  transaction_lt: String
+  transaction_gte: String
+  transaction_lte: String
+  transaction_in: [String!]
+  transaction_not_in: [String!]
+  transaction_contains: String
+  transaction_contains_nocase: String
+  transaction_not_contains: String
+  transaction_not_contains_nocase: String
+  transaction_starts_with: String
+  transaction_starts_with_nocase: String
+  transaction_not_starts_with: String
+  transaction_not_starts_with_nocase: String
+  transaction_ends_with: String
+  transaction_ends_with_nocase: String
+  transaction_not_ends_with: String
+  transaction_not_ends_with_nocase: String
+  transaction_: Transaction_filter
+  """Filter for the block changed event."""
+  _change_block: BlockChangedFilter
+  and: [IncreaseEvent_filter]
+  or: [IncreaseEvent_filter]
+}
+
+enum IncreaseEvent_orderBy {
+  id
+  pool
+  pool__id
+  pool__createdAtTimestamp
+  pool__createdAtBlockNumber
+  pool__feeTier
+  pool__liquidity
+  pool__sqrtPrice
+  pool__feeGrowthGlobal0X128
+  pool__feeGrowthGlobal1X128
+  pool__token0Price
+  pool__token1Price
+  pool__tick
+  pool__observationIndex
+  pool__volumeToken0
+  pool__volumeToken1
+  pool__volumeUSD
+  pool__untrackedVolumeUSD
+  pool__feesUSD
+  pool__txCount
+  pool__collectedFeesToken0
+  pool__collectedFeesToken1
+  pool__collectedFeesUSD
+  pool__totalValueLockedToken0
+  pool__totalValueLockedToken1
+  pool__totalValueLockedETH
+  pool__totalValueLockedUSD
+  pool__totalValueLockedUSDUntracked
+  pool__isProtocolFeeEnabled
+  pool__liquidityProviderCount
+  tokenID
+  position
+  position__id
+  position__owner
+  position__liquidity
+  position__depositedToken0
+  position__depositedToken1
+  position__withdrawnToken0
+  position__withdrawnToken1
+  position__collectedToken0
+  position__collectedToken1
+  position__collectedFeesToken0
+  position__collectedFeesToken1
+  position__amountDepositedUSD
+  position__amountWithdrawnUSD
+  position__amountCollectedUSD
+  position__feeGrowthInside0LastX128
+  position__feeGrowthInside1LastX128
+  amount0
+  amount1
+  token0
+  token0__id
+  token0__symbol
+  token0__name
+  token0__decimals
+  token0__totalSupply
+  token0__volume
+  token0__volumeUSD
+  token0__untrackedVolumeUSD
+  token0__feesUSD
+  token0__txCount
+  token0__poolCount
+  token0__totalValueLocked
+  token0__totalValueLockedUSD
+  token0__totalValueLockedUSDUntracked
+  token0__derivedETH
+  token1
+  token1__id
+  token1__symbol
+  token1__name
+  token1__decimals
+  token1__totalSupply
+  token1__volume
+  token1__volumeUSD
+  token1__untrackedVolumeUSD
+  token1__feesUSD
+  token1__txCount
+  token1__poolCount
+  token1__totalValueLocked
+  token1__totalValueLockedUSD
+  token1__totalValueLockedUSDUntracked
+  token1__derivedETH
+  timeStamp
+  transaction
+  transaction__id
+  transaction__blockNumber
+  transaction__timestamp
+  transaction__gasUsed
+  transaction__gasPrice
+}
+
+type SetProtocolFeeEvent {
+  id: ID!
+  pool: Pool!
+  logIndex: BigInt!
+  new0: BigInt!
+  new1: BigInt!
+  old0: BigInt!
+  old1: BigInt!
+  timestamp: BigInt!
+}
+
+input SetProtocolFeeEvent_filter {
+  id: ID
+  id_not: ID
+  id_gt: ID
+  id_lt: ID
+  id_gte: ID
+  id_lte: ID
+  id_in: [ID!]
+  id_not_in: [ID!]
+  pool: String
+  pool_not: String
+  pool_gt: String
+  pool_lt: String
+  pool_gte: String
+  pool_lte: String
+  pool_in: [String!]
+  pool_not_in: [String!]
+  pool_contains: String
+  pool_contains_nocase: String
+  pool_not_contains: String
+  pool_not_contains_nocase: String
+  pool_starts_with: String
+  pool_starts_with_nocase: String
+  pool_not_starts_with: String
+  pool_not_starts_with_nocase: String
+  pool_ends_with: String
+  pool_ends_with_nocase: String
+  pool_not_ends_with: String
+  pool_not_ends_with_nocase: String
+  pool_: Pool_filter
+  logIndex: BigInt
+  logIndex_not: BigInt
+  logIndex_gt: BigInt
+  logIndex_lt: BigInt
+  logIndex_gte: BigInt
+  logIndex_lte: BigInt
+  logIndex_in: [BigInt!]
+  logIndex_not_in: [BigInt!]
+  new0: BigInt
+  new0_not: BigInt
+  new0_gt: BigInt
+  new0_lt: BigInt
+  new0_gte: BigInt
+  new0_lte: BigInt
+  new0_in: [BigInt!]
+  new0_not_in: [BigInt!]
+  new1: BigInt
+  new1_not: BigInt
+  new1_gt: BigInt
+  new1_lt: BigInt
+  new1_gte: BigInt
+  new1_lte: BigInt
+  new1_in: [BigInt!]
+  new1_not_in: [BigInt!]
+  old0: BigInt
+  old0_not: BigInt
+  old0_gt: BigInt
+  old0_lt: BigInt
+  old0_gte: BigInt
+  old0_lte: BigInt
+  old0_in: [BigInt!]
+  old0_not_in: [BigInt!]
+  old1: BigInt
+  old1_not: BigInt
+  old1_gt: BigInt
+  old1_lt: BigInt
+  old1_gte: BigInt
+  old1_lte: BigInt
+  old1_in: [BigInt!]
+  old1_not_in: [BigInt!]
+  timestamp: BigInt
+  timestamp_not: BigInt
+  timestamp_gt: BigInt
+  timestamp_lt: BigInt
+  timestamp_gte: BigInt
+  timestamp_lte: BigInt
+  timestamp_in: [BigInt!]
+  timestamp_not_in: [BigInt!]
+  """Filter for the block changed event."""
+  _change_block: BlockChangedFilter
+  and: [SetProtocolFeeEvent_filter]
+  or: [SetProtocolFeeEvent_filter]
+}
+
+enum SetProtocolFeeEvent_orderBy {
+  id
+  pool
+  pool__id
+  pool__createdAtTimestamp
+  pool__createdAtBlockNumber
+  pool__feeTier
+  pool__liquidity
+  pool__sqrtPrice
+  pool__feeGrowthGlobal0X128
+  pool__feeGrowthGlobal1X128
+  pool__token0Price
+  pool__token1Price
+  pool__tick
+  pool__observationIndex
+  pool__volumeToken0
+  pool__volumeToken1
+  pool__volumeUSD
+  pool__untrackedVolumeUSD
+  pool__feesUSD
+  pool__txCount
+  pool__collectedFeesToken0
+  pool__collectedFeesToken1
+  pool__collectedFeesUSD
+  pool__totalValueLockedToken0
+  pool__totalValueLockedToken1
+  pool__totalValueLockedETH
+  pool__totalValueLockedUSD
+  pool__totalValueLockedUSDUntracked
+  pool__isProtocolFeeEnabled
+  pool__liquidityProviderCount
+  logIndex
+  new0
+  new1
+  old0
+  old1
+  timestamp
 }
 
 type MergedPosition {

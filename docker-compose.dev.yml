@@ -39,6 +39,7 @@ services:
       GRAPH_API_KEY: ${GRAPH_API_KEY}
       ALCHEMY_API_KEY: ${ALCHEMY_API_KEY}
       VIC_PRIVATE_KEY: ${VIC_PRIVATE_KEY}
+      COHERE_API_KEY: ${COHERE_API_KEY}
     command: pnpm --filter @vic/indexer-agent dev
     depends_on:
       - rabbitmq
@@ -85,20 +86,20 @@ services:
       - postgres
     env_file: .env
 
-  targeting_agent:
+  counsellor_agent:
     build:
       context: .
-      dockerfile: packages/targeting-agent/Dockerfile
+      dockerfile: packages/counsellor-agent/Dockerfile
     volumes:
       - .:/usr/src/app:cached
       - /usr/src/app/node_modules
-      - /usr/src/app/packages/targeting-agent/node_modules
+      - /usr/src/app/packages/counsellor-agent/node_modules
       - /usr/src/app/packages/shared/node_modules
     environment:
-      DATABASE_URL: ${TARGETING_AGENT_DATABASE_URL}
+      DATABASE_URL: ${COUNSELLOR_AGENT_DATABASE_URL}
       NODE_ENV: development
       RABBITMQ_URL: amqp://rabbitmq:5672
-    command: pnpm --filter @vic/targeting-agent dev
+    command: pnpm --filter @vic/counsellor-agent dev
     depends_on:
       - rabbitmq
       - postgres
@@ -118,7 +119,7 @@ services:
       - rabbitmq_data:/var/lib/rabbitmq
 
   postgres:
-    image: postgres:15-alpine
+    image: ankane/pgvector:v0.5.1
     ports:
       - "${POSTGRES_PORT}:5432"
     volumes:
@@ -127,7 +128,8 @@ services:
     environment:
       POSTGRES_USER: ${POSTGRES_USER}
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
-      POSTGRES_MULTIPLE_DATABASES: "api,analysis_agent,indexer_agent,permit_agent,targeting_agent"
+      POSTGRES_MULTIPLE_DATABASES: "api,analysis_agent,indexer_agent,permit_agent,counsellor_agent"
+    command: ["postgres", "-c", "shared_preload_libraries=vector"]
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER}"]
       interval: 5s

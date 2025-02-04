@@ -11,11 +11,11 @@ RUN npm install -g pnpm@9.15.5
 # Copy root package.json and workspace files
 COPY package*.json pnpm-workspace.yaml pnpm-lock.yaml ./
 COPY packages/shared/package*.json ./packages/shared/
-COPY packages/targeting-agent/package*.json ./packages/targeting-agent/
+COPY packages/counsellor-agent/package*.json ./packages/counsellor-agent/
 
 # Install dependencies
 RUN pnpm install --frozen-lockfile
 
 # Copy source code
 COPY packages/shared ./packages/shared
-COPY packages/targeting-agent ./packages/targeting-agent 
+COPY packages/counsellor-agent ./packages/counsellor-agent 

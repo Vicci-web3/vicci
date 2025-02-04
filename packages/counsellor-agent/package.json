@@ -1,5 +1,5 @@
 {
-  "name": "@vic/targeting-agent",
+  "name": "@vic/counesslor-agent",
   "version": "0.0.1",
   "scripts": {
     "dev": "tsx watch --clear-screen=false src/index.ts",

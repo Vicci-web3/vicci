@@ -3,7 +3,7 @@ sources:
     handler:
       graphql:
         endpoint: https://gateway.thegraph.com/api/${GRAPH_API_KEY}/subgraphs/id/5zvR82QoaXYFyDEKLZ9t6v9adgnptxYpKpSbxtgVENFV
-  - name: uniswap-v3-base
+  - name: uniswapV3Base
     handler:
       graphql:
         endpoint: https://gateway.thegraph.com/api/${GRAPH_API_KEY}/subgraphs/id/GqzP4Xaehti8KSfQmv3ZctFSjnSUYZ4En5NRsiTbvZpz
@@ -11,10 +11,10 @@ sources:
     handler:
       graphql:
         endpoint: https://gateway.thegraph.com/api/${GRAPH_API_KEY}/subgraphs/id/2tGWMrDha4164KkFAfkU3rDCtuxGb4q1emXmFdLLzJ8x
-#  - name: sushiswap-v3-base
-#    handler:
-#      graphql:
-#        endpoint: https://gateway.thegraph.com/api/${GRAPH_API_KEY}/subgraphs/id/9KSiDKQ3KnwyxU5yA1KkGbqF4uREHVfmUcrLyjS4itSY
+  - name: sushiswapV3Arbitrum
+    handler:
+      graphql:
+        endpoint: https://gateway.thegraph.com/api/${GRAPH_API_KEY}/subgraphs/id/96EYD64NqmnFxMELu2QLWB95gqCmA9N96ssYsZfFiYHg
 
 documents:
   - ./src/queries/*.graphql
