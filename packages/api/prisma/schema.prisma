@@ -7,15 +7,39 @@ datasource db {
   url      = env("DATABASE_URL")
 }
 
+model Venue {
+  id          String     @id @default(uuid())
+  name        String
+  address     String     @unique
+  type        String
+  email       String?
+  verified    Boolean    @default(false)
+  createdAt   DateTime   @default(now())
+  campaigns   Campaign[]
+}
+
 model Campaign {
-  id          String   @id @default(uuid())
+  id          String    @id @default(uuid())
+  venueId     String    
+  venue       Venue     @relation(fields: [venueId], references: [id])
   protocol    String
   objective   String
   rewardToken String
   rewardType  String
   amount      BigInt
   validUntil  DateTime
-  createdAt   DateTime @default(now())
+  createdAt   DateTime  @default(now())
+  permits     Permit[]
+}
+
+model Visitor {
+  id          String    @id @default(uuid())
+  address     String    @unique
+  name        String?
+  email       String?
+  type        String?
+  verified    Boolean   @default(false)
+  createdAt   DateTime  @default(now())
   permits     Permit[]
 }
 
@@ -23,7 +47,8 @@ model Permit {
   id          String    @id
   campaignId  String
   campaign    Campaign  @relation(fields: [campaignId], references: [id])
-  recipient   String
+  visitorId   String
+  visitor     Visitor   @relation(fields: [visitorId], references: [id])
   claimed     Boolean   @default(false)
   claimedAt   DateTime?
   signature   String

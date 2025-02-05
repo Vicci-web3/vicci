@@ -1,3 +1,4 @@
+version: '3.8'
 services:
   api:
     build:
@@ -9,7 +10,7 @@ services:
       - /usr/src/app/packages/api/node_modules
       - /usr/src/app/packages/shared/node_modules
     ports:
-      - "3000:3000"
+      - "3001:3000"
     depends_on:
       postgres:
         condition: service_healthy
@@ -146,15 +147,26 @@ services:
       - /usr/src/app/packages/web/node_modules
       - /usr/src/app/packages/shared/node_modules
     ports:
-      - "3001:3000"
+      - "3002:3000"
     environment:
       NODE_ENV: development
       NEXT_PUBLIC_API_URL: http://api:3000
       NEXT_PUBLIC_ONCHAINKIT_API_KEY: ${NEXT_PUBLIC_ONCHAINKIT_API_KEY}
+      API_URL: http://api:3001
     command: pnpm --filter @vic/web dev
     depends_on:
       - api
     env_file: .env
+
+  nginx:
+    image: nginx:alpine
+    ports:
+      - "3000:80"
+    volumes:
+      - ./nginx.conf:/etc/nginx/nginx.conf:ro
+    depends_on:
+      - web
+      - api
 
 volumes:
   postgres_data:
