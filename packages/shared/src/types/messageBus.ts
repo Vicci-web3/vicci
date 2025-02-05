@@ -2,10 +2,11 @@ export const Topics = {
   NEW_CAMPAIGN: 'campaign.new',
   INDEXER_EVENT: 'indexer.new_event',
   BATCH_COMPLETE: 'indexer.batch_complete',
-  ANALYSIS_REQUEST: 'analysis.request'
+  ANALYSIS_REQUEST: 'analysis.request',
+  AGENT_STATUS: 'agent.status'
 } as const;
 
-export type Topics = keyof typeof Topics;
+export type TopicType = typeof Topics[keyof typeof Topics];
 
 export interface Campaign {
   id: string;
@@ -65,4 +66,10 @@ export interface TopicPayloadMap {
   [Topics.INDEXER_EVENT]: IndexerEvent;
   [Topics.BATCH_COMPLETE]: { blockRange: [number, number] };
   [Topics.ANALYSIS_REQUEST]: { address: string; timeframe: string };
+  [Topics.AGENT_STATUS]: { 
+    agentId: string;
+    status: string;
+    config?: Record<string, unknown>;
+    timestamp: string;
+  };
 }

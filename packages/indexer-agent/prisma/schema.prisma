@@ -7,23 +7,49 @@ datasource db {
   url      = env("DATABASE_URL")
 }
 
+// Note: position_embeddings table is managed separately via SQL
+// because Prisma doesn't support vector type
 model IndexerState {
-  id          String   @id @default(uuid())
-  chainId     Int      @unique
-  lastIndexed Int      @default(0)
-  updatedAt   DateTime @updatedAt
+  id                 String   @id
+  chainId            Int      @unique
+  lastIndexedPositions String[] // Store position IDs
+  updatedAt          DateTime @updatedAt
+}
+
+model Position {
+  id          String   @id
+  owner       String
+  liquidity   String
+  source      String   // e.g. 'uniswap_mainnet', 'sushi_base'
   createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@index([owner])
+  @@index([source])
+}
+
+// For tracking position changes
+model PositionChange {
+  id           String   @id @default(cuid())
+  positionId   String
+  changeType   String   // 'created', 'updated', 'removed'
+  oldLiquidity String?
+  newLiquidity String?
+  timestamp    DateTime @default(now())
+
+  @@index([positionId])
+  @@index([timestamp])
 }
 
 // We might want to track indexing tasks/jobs
 model IndexingTask {
-  id            Int      @id @default(autoincrement())
-  chainId       Int
-  fromBlock     Int
-  toBlock       Int
-  status        String   // 'pending' | 'processing' | 'completed' | 'failed'
-  error         String?
-  startedAt     DateTime?
-  completedAt   DateTime?
-  createdAt     DateTime @default(now())
+  id          Int       @id @default(autoincrement())
+  chainId     Int
+  fromBlock   Int
+  toBlock     Int
+  status      String
+  error       String?
+  startedAt   DateTime?
+  completedAt DateTime?
+  createdAt   DateTime  @default(now())
 } 

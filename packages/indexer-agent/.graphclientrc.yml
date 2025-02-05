@@ -27,7 +27,10 @@ additionalTypeDefs: |
   }
 
   extend type Query {
-    mergedPositions: [MergedPosition!]!
+    mergedPositions(
+      first: Int
+      skip: Int
+    ): [MergedPosition!]!
   }
 
 additionalResolvers:

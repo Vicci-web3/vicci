@@ -1,0 +1,7 @@
+query GetMergedPositions($first: Int, $skip: Int) {
+  mergedPositions(first: $first, skip: $skip) {
+    id
+    owner
+    liquidity
+  }
+} 

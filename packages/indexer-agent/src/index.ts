@@ -9,6 +9,7 @@ import { GetMergedPositionsDocument, execute } from '../.graphclient'
 import { Cohere } from '@langchain/cohere'
 import { CohereEmbeddings } from '@langchain/cohere'
 
+
 interface IndexerAgentConfig extends AgentConfig {
   id: string
   chainId: number
@@ -29,12 +30,25 @@ interface PositionInsight {
   confidence: number
 }
 
+interface MergedPosition {
+  id: string
+  owner: string
+  liquidity: string
+  // Add other fields from your GraphQL schema
+}
+
+interface GraphQLResult {
+  mergedPositions: MergedPosition[]
+}
+
 class IndexerAgent implements Agent {
   public readonly config: IndexerAgentConfig
   private metrics: AgentMetrics
   private messageBus: MessageBus
   public readonly llm: Cohere
-  private lastIndexedBlock: number = 0  // Initialize with 0
+  private lastIndexedPositions: Set<string> = new Set()
+  private paginationRound: number = 0
+  private readonly MAX_ROUNDS = 20  // Will cover 100 positions total (5 x 4 sources x 5 rounds)
   private vectorStore: PGVectorStore
   private embeddings: CohereEmbeddings
   private positionAnalysisPrompt: PromptTemplate
@@ -86,7 +100,8 @@ class IndexerAgent implements Agent {
       postgresConnectionOptions: {
         connectionString: process.env.DATABASE_URL,
       },
-      tableName: 'position_embeddings'
+      tableName: 'position_embeddings',
+      createTableIfNotExists: true
     })
 
     this.positionAnalysisPrompt = PromptTemplate.fromTemplate(`
@@ -130,9 +145,9 @@ class IndexerAgent implements Agent {
 
     // Get or create indexer state
     const state = await this.getOrCreateIndexerState()
-    this.lastIndexedBlock = this.config.startBlock || state.lastIndexed
+    this.lastIndexedPositions = new Set(state.lastIndexedPositions || [])
 
-    console.log(`Starting ${this.config.id} from block ${this.lastIndexedBlock}`)
+    console.log(`Starting ${this.config.id} from positions: ${JSON.stringify(Array.from(this.lastIndexedPositions))}`)
     console.log('Responsibilities:', this.config.responsibilities)
     console.log('Outputs:', this.config.outputs)
 
@@ -154,8 +169,9 @@ class IndexerAgent implements Agent {
     // Create initial state
     return prisma.indexerState.create({
       data: {
+        id: `chain-${this.config.chainId}`,  // Generate a unique ID
         chainId: this.config.chainId,
-        lastIndexed: 0  // Start from block 0 or specify a starting block
+        lastIndexedPositions: []
       }
     })
   }
@@ -166,7 +182,7 @@ class IndexerAgent implements Agent {
         chainId: this.config.chainId
       },
       data: {
-        lastIndexed: blockNumber  // Now we store the actual block number
+        lastIndexedPositions: Array.from(this.lastIndexedPositions)
       }
     })
   }
@@ -189,36 +205,71 @@ class IndexerAgent implements Agent {
   }
 
   private async setupContinuousIndexing() {
+    // Track all positions we've seen in this cycle
+    let cyclePositions = new Set<string>()
+
     setInterval(async () => {
       try {
-        const currentBlock = await getCurrentBlock(this.config.chainId)
+        console.log(`\n--- Indexing Round ${this.paginationRound + 1}/${this.MAX_ROUNDS} ---`)
         
-        if (currentBlock > this.lastIndexedBlock + this.config.indexingInterval) {
-          const fromBlock = this.lastIndexedBlock + 1
-          const toBlock = Math.min(
-            this.lastIndexedBlock + this.config.indexingInterval,
-            currentBlock
-          )
-
-          await this.indexBlockRange(fromBlock, toBlock)
-          await this.updateMetrics(true)
-
-          // Publish outputs defined in config
-          for (const output of this.config.outputs) {
-            await this.messageBus.publish(`${this.config.id}.${output}`, {
-              blockRange: [fromBlock, toBlock],
-              data: {} // Add relevant data for each output type
-            })
-          }
+        if (this.paginationRound >= this.MAX_ROUNDS) {
+          console.log('Completed full indexing cycle, resetting pagination')
+          this.paginationRound = 0
+          // Reset cycle tracking
+          cyclePositions = new Set()
         }
+
+        const skip = this.paginationRound * 5
+        console.log(`Fetching positions (skip: ${skip}, first: 5)`)
+
+        const result = await execute(GetMergedPositionsDocument, {}, {skip, first: 5})
+
+        console.log('GraphQL result:', JSON.stringify(result, null, 2))
+
+        if (!result || !result.data) {
+          console.error('Invalid GraphQL response:', result)
+          throw new Error('Failed to fetch positions from GraphQL')
+        }
+
+        const positions = (result.data as GraphQLResult).mergedPositions || []
+        console.log(`Fetched ${positions.length} positions`)
+
+        // Only track new positions we haven't seen before in this cycle
+        const newPositions = positions.filter(p => !cyclePositions.has(p.id))
+        
+        if (newPositions.length > 0) {
+          console.log('\nProcessing new positions:')
+          console.log(newPositions.map(p => `${p.id} (${p.owner})`).join('\n'))
+
+          console.log('\nVectorizing positions...')
+          const documents = await Promise.all(newPositions.map(p => this.vectorizePosition(p)))
+          console.log(`Created ${documents.length} vector documents`)
+
+          console.log('Adding to vector store...')
+          await this.vectorStore.addDocuments(documents)
+        }
+
+        // Add current positions to cycle tracking
+        positions.forEach(p => cyclePositions.add(p.id))
+
+        this.paginationRound++
+        await this.updateMetrics(true)
+        
       } catch (error) {
+        console.error('Error in indexing round:', error)
+        if (error instanceof Error) {
+          console.error('Stack trace:', error.stack)
+        }
         await this.updateMetrics(false)
-        console.error('Error during indexing:', error)
       }
     }, this.config.pollInterval)
   }
 
-  private async vectorizePosition(position: any): Promise<Document> {
+  private async vectorizePosition(position: MergedPosition): Promise<Document> {
+    console.log(`\nVectorizing position ${position.id}:`)
+    console.log(`Owner: ${position.owner}`)
+    console.log(`Liquidity: ${position.liquidity}`)
+
     const text = `
       Position ID: ${position.id}
       Owner: ${position.owner}
@@ -237,50 +288,8 @@ class IndexerAgent implements Agent {
     })
   }
 
-  private async indexBlockRange(fromBlock: number, toBlock: number) {
-    try {
-      const result = await execute(GetMergedPositionsDocument, {})
-      const positions = result.mergedPositions || []
-
-      // Store position embeddings
-      const documents = await Promise.all(
-        positions.map(p => this.vectorizePosition(p))
-      )
-      await this.vectorStore.addDocuments(documents)
-
-      // Get LLM analysis
-      const insight = await this.analyzePositions(positions)
-
-      await this.messageBus.publish(Topics.INDEXER_EVENT, {
-        blockNumber: toBlock,
-        timestamp: new Date().toISOString(),
-        status: 'indexed',
-        data: {
-          fromBlock,
-          toBlock,
-          positions,
-          insight
-        }
-      })
-
-    } catch (error) {
-      console.error(`Error indexing block range ${fromBlock}-${toBlock}:`, error)
-      
-      await this.messageBus.publish(Topics.INDEXER_EVENT, {
-        blockNumber: fromBlock,
-        timestamp: new Date().toISOString(),
-        status: 'error',
-        error: error instanceof Error ? error.message : 'Unknown error',
-        data: {
-          fromBlock,
-          toBlock
-        }
-      })
-    }
-  }
-
-  private async analyzePositions(positions: any[]): Promise<PositionInsight> {
-    const response = await this.llm.call(
+  private async analyzePositions(positions: MergedPosition[]): Promise<PositionInsight> {
+    const response = await this.llm.invoke(
       await this.positionAnalysisPrompt.format({
         positionData: JSON.stringify(positions, null, 2)
       })
