@@ -1,0 +1,163 @@
+@import "tailwindcss";
+@import '@coinbase/onchainkit/styles.css';
+
+@theme {
+  /* OnchainKit Theme Variables */
+  --ock-font-family: var(--font-sans);
+  --ock-border-radius: var(--radius);
+  --ock-border-radius-inner: calc(var(--radius) - 2px);
+  
+  /* Text Colors */
+  --ock-text-inverse: var(--background);
+  --ock-text-foreground: var(--foreground);
+  --ock-text-foreground-muted: var(--muted-foreground);
+  --ock-text-error: var(--destructive);
+  --ock-text-primary: var(--primary);
+  --ock-text-success: oklch(0.65 0.15 160);
+  --ock-text-warning: oklch(0.75 0.18 80);
+  --ock-text-disabled: var(--muted-foreground);
+
+  /* Background Colors */
+  --ock-bg-default: var(--background);
+  --ock-bg-default-hover: var(--muted);
+  --ock-bg-default-active: var(--accent);
+  --ock-bg-alternate: var(--card);
+  --ock-bg-alternate-hover: var(--accent);
+  --ock-bg-alternate-active: var(--accent-foreground);
+  --ock-bg-inverse: var(--popover);
+  --ock-bg-inverse-hover: var(--popover-foreground);
+  --ock-bg-inverse-active: var(--muted);
+  --ock-bg-primary: var(--primary);
+  --ock-bg-primary-hover: oklch(0.75 0.15 240);
+  --ock-bg-primary-active: oklch(0.65 0.15 240);
+  --ock-bg-primary-washed: oklch(0.9 0.03 240);
+  --ock-bg-primary-disabled: var(--muted);
+  --ock-bg-secondary: var(--secondary);
+  --ock-bg-secondary-hover: oklch(0.89 0.12 160);
+  --ock-bg-secondary-active: oklch(0.79 0.12 160);
+  --ock-bg-error: var(--destructive);
+  --ock-bg-warning: oklch(0.75 0.18 80);
+  --ock-bg-success: oklch(0.65 0.15 160);
+  --ock-bg-default-reverse: var(--background);
+
+  /* Icon Colors */
+  --ock-icon-color-primary: var(--primary);
+  --ock-icon-color-foreground: var(--foreground);
+  --ock-icon-color-foreground-muted: var(--muted-foreground);
+  --ock-icon-color-inverse: oklch(1 0 0);
+  --ock-icon-color-error: var(--destructive);
+  --ock-icon-color-success: oklch(0.65 0.15 160);
+  --ock-icon-color-warning: oklch(0.75 0.18 80);
+
+  /* Lines/Borders */
+  --ock-line-primary: var(--border);
+  --ock-line-default: var(--input);
+  --ock-line-heavy: var(--ring);
+  --ock-line-inverse: oklch(1 0 0);
+
+  /* Original Theme Variables */
+  --font-sans: ui-sans-serif, system-ui, sans-serif;
+  --background: oklch(1 0 0);
+  --foreground: oklch(0.2 0 0);
+  
+  --card: oklch(1 0 0);
+  --card-foreground: oklch(0.2 0 0);
+  
+  --popover: oklch(1 0 0);
+  --popover-foreground: oklch(0.2 0 0);
+  
+  --primary: oklch(0.7 0.15 240);
+  --primary-foreground: oklch(1 0 0);
+  
+  --secondary: oklch(0.84 0.12 160);
+  --secondary-foreground: oklch(0.2 0 0);
+  
+  --muted: oklch(0.96 0.03 240);
+  --muted-foreground: oklch(0.64 0.05 240);
+  
+  --accent: oklch(0.76 0.12 262);
+  --accent-foreground: oklch(0.2 0 0);
+  
+  --destructive: oklch(0.7 0.16 30);
+  --destructive-foreground: oklch(1 0 0);
+  
+  --border: oklch(0.85 0.03 240);
+  --input: oklch(0.85 0.03 240);
+  --ring: oklch(0.7 0.15 240);
+  
+  --radius: 0.5rem;
+
+  /* Update/Add these OnchainKit specific variables for dropdown styling */
+  --ock-bg-default: var(--background);
+  --ock-bg-default-hover: var(--muted);
+  --ock-bg-alternate: var(--card);
+  --ock-bg-alternate-hover: var(--accent);
+  
+  /* Text colors for dropdown */
+  --ock-text-foreground: var(--foreground);
+  --ock-text-foreground-muted: var(--muted-foreground);
+  --ock-text-inverse: var(--background);
+  
+  /* Dropdown specific colors */
+  --ock-dropdown-bg: var(--background);
+  --ock-dropdown-hover: var(--muted);
+  --ock-dropdown-text: var(--foreground);
+  --ock-dropdown-text-hover: var(--foreground);
+  --ock-dropdown-border: var(--border);
+}
+
+@layer utilities {
+  .text-balance {
+    text-wrap: balance;
+  }
+}
+
+/* Add these custom styles for OnchainKit dropdown */
+:where(.ock-dropdown-content) {
+  background-color: var(--ock-dropdown-bg);
+  color: var(--ock-dropdown-text);
+  border: 1px solid var(--ock-dropdown-border);
+}
+
+:where(.ock-dropdown-item) {
+  color: var(--ock-dropdown-text);
+}
+
+:where(.ock-dropdown-item:hover) {
+  background-color: var(--ock-dropdown-hover);
+  color: var(--ock-dropdown-text-hover);
+}
+
+/* Add these more specific styles for OnchainKit dropdown after your @theme section */
+.ock-dropdown {
+  --ock-dropdown-bg: oklch(0.2 0 0);
+  --ock-dropdown-text: oklch(1 0 0);
+  background-color: var(--ock-dropdown-bg) !important;
+  color: var(--ock-dropdown-text) !important;
+}
+
+.ock-dropdown-content {
+  background-color: oklch(0.2 0 0) !important;
+  color: oklch(1 0 0) !important;
+  border: 1px solid oklch(0.3 0 0) !important;
+}
+
+.ock-dropdown-item {
+  color: oklch(1 0 0) !important;
+}
+
+.ock-dropdown-item:hover {
+  background-color: oklch(0.3 0 0) !important;
+  color: oklch(1 0 0) !important;
+}
+
+/* If needed, add specific styles for the connect button */
+.ock-connect-button {
+  background-color: var(--primary) !important;
+  color: oklch(1 0 0) !important;
+}
+
+.ock-connect-button:hover {
+  background-color: var(--primary-hover) !important;
+}
+

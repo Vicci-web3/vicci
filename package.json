@@ -8,7 +8,7 @@
   "scripts": {
     "dev:docker": "docker compose -f docker-compose.dev.yml up",
     "dev": "turbo run dev",
-    "build": "turbo run build",
+    "build": "pnpm install && pnpm -r build",
     "test": "turbo run test"
   },
   "devDependencies": {

@@ -136,6 +136,26 @@ services:
       timeout: 5s
       retries: 5
 
+  web:
+    build:
+      context: .
+      dockerfile: packages/web/Dockerfile
+    volumes:
+      - .:/usr/src/app:cached
+      - /usr/src/app/node_modules
+      - /usr/src/app/packages/web/node_modules
+      - /usr/src/app/packages/shared/node_modules
+    ports:
+      - "3001:3000"
+    environment:
+      NODE_ENV: development
+      NEXT_PUBLIC_API_URL: http://api:3000
+      NEXT_PUBLIC_ONCHAINKIT_API_KEY: ${NEXT_PUBLIC_ONCHAINKIT_API_KEY}
+    command: pnpm --filter @vic/web dev
+    depends_on:
+      - api
+    env_file: .env
+
 volumes:
   postgres_data:
   rabbitmq_data: 

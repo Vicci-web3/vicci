@@ -4,14 +4,15 @@
   "main": "dist/index.js",
   "types": "dist/index.d.ts",
   "scripts": {
-    "dev": "tsc --watch --preserveWatchOutput",
-    "build": "tsc",
+    "dev": "tsx watch src/index.ts",
+    "build": "tsx src/index.ts",
     "clean": "rm -rf dist"
   },
   "dependencies": {
     "@langchain/core": "^0.3.37",
     "amqplib": "^0.10.5",
-    "zod": "^3.24.1"
+    "zod": "^3.24.1",
+    "tsx": "^4.7.1"
   },
   "devDependencies": {
     "@types/amqplib": "^0.10.6",

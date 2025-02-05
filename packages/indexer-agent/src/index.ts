@@ -73,7 +73,8 @@ class IndexerAgent implements Agent {
       dependencies: [],
       chainId: 1,
       indexingInterval: 100,
-      pollInterval: 30000,
+      // 2 hours in ms = 1000ms * 60s * 60m * 2h
+      pollInterval: 1000 * 60 * 60 * 2,
       llmConfig: {
         model: 'command',  // Cohere's latest model
         temperature: 0.7,

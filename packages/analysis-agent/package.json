@@ -2,23 +2,26 @@
   "name": "@vic/analysis-agent",
   "version": "0.0.1",
   "scripts": {
+    "dev": "pnpm db:init && tsx watch --clear-screen=false src/index.ts",
+    "codegen": "graphclient build",
+    "build": "tsc",
+    "build:graph": "graphclient build",
+    "test": "jest",
     "prisma:generate": "prisma generate",
     "prisma:migrate": "prisma migrate deploy",
     "db:init": "pnpm prisma:generate && pnpm prisma:migrate",
-    "dev": "pnpm db:init && tsx watch --clear-screen=false src/index.ts",
-    "build": "tsc",
-    "test": "jest"
+    "db:push": "prisma db push"
   },
   "dependencies": {
     "@prisma/client": "^6.3.0",
-    "@vic/shared": "workspace:^",
-    "amqplib": "^0.10.5"
+    "@vic/shared": "workspace:*",
+    "amqplib": "^0.10.5",
+    "tsx": "^4.7.1"
   },
   "devDependencies": {
     "@types/amqplib": "^0.10.6",
     "@types/node": "^22.1.0",
     "prisma": "^6.3.0",
-    "tsx": "^4.7.0",
     "typescript": "~5.6.3"
   }
 }
