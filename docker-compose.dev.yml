@@ -11,6 +11,7 @@ services:
       - /usr/src/app/packages/shared/node_modules
     ports:
       - "3001:3000"
+      - "3002:3002"
     depends_on:
       postgres:
         condition: service_healthy
@@ -21,6 +22,11 @@ services:
       NODE_ENV: development
       RABBITMQ_URL: amqp://rabbitmq:5672
       GRAPH_API_KEY: ${GRAPH_API_KEY}
+      NETWORK_ID: ${NETWORK_ID}
+      CDP_API_KEY_NAME: ${CDP_API_KEY_NAME}
+      CDP_API_KEY_PRIVATE_KEY: ${CDP_API_KEY_PRIVATE_KEY}
+      COHERE_API_KEY: ${COHERE_API_KEY}
+      WS_PORT: 3002
     command: pnpm --filter @vic/api dev
     env_file: .env
 
@@ -164,6 +170,7 @@ services:
       - "3000:80"
     volumes:
       - ./nginx.conf:/etc/nginx/nginx.conf:ro
+      - ./nginx.websocket.conf:/etc/nginx/conf.d/websocket.conf:ro
     depends_on:
       - web
       - api
