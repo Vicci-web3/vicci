@@ -156,7 +156,11 @@ const auth: FastifyPluginAsync = async (fastify): Promise<void> => {
 
   // Clear session
   fastify.delete('/session', async function (request, reply) {
-    reply.clearCookie('siwe')
+    // Clear all auth-related cookies
+    reply.clearCookie('siwe', {
+      path: '/',
+      domain: 'localhost'
+    })
     return { authenticated: false }
   })
 

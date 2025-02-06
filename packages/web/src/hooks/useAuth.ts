@@ -17,32 +17,14 @@ export function useAuth() {
       }
 
       try {
-        console.log('Checking auth session...')
         const response = await fetch('/api/auth/session')
         const data = await response.json()
-        console.log('Auth session response:', data)
         
-        if (data.authenticated) {
-          setIsAuthenticated(true)
-          
-          // Only check and redirect if on the main page
-          if (window.location.pathname === '/') {
-            const userResponse = await fetch(`/api/user/status?address=${data.address}`)
-            const userData = await userResponse.json()
-            console.log('User status:', userData)
-            
-            if (userData.type) {
-              router.push(`/dashboard/${userData.type}`)
-            } else {
-              router.push('/register')
-            }
-          }
-        } else {
+        if (!data.authenticated) {
           setIsAuthenticated(false)
-          // Only redirect to register if on a protected route (dashboard)
-          if (window.location.pathname.includes('/dashboard')) {
-            router.push('/register')
-          }
+          localStorage.removeItem('userType')
+        } else {
+          setIsAuthenticated(true)
         }
       } catch (error) {
         console.error('Auth check error:', error)
@@ -53,7 +35,7 @@ export function useAuth() {
     }
 
     checkAuth()
-  }, [isConnected, router])
+  }, [isConnected])
 
   return { 
     isAuthenticated, 

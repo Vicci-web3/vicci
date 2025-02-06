@@ -1,5 +1,4 @@
-import { FastifyPluginAsync, FastifyRequest, FastifyReply } from 'fastify'
-import { Topics } from '@vic/shared'
+import { FastifyPluginAsync } from 'fastify'
 
 interface CreateCampaignBody {
   protocol: string
@@ -10,51 +9,78 @@ interface CreateCampaignBody {
   validUntil: string // DateTime will be converted from ISO string
 }
 
-interface RouteParams {
-  id: string
-}
-
 const campaigns: FastifyPluginAsync = async (fastify): Promise<void> => {
-  fastify.post<{ Body: CreateCampaignBody }>('/', async function (
-    request: FastifyRequest<{ Body: CreateCampaignBody }>,
-    reply: FastifyReply
-  ) {
-    const campaign = await fastify.prisma.campaign.create({
-      data: {
-        ...request.body,
-        amount: BigInt(request.body.amount),
-        validUntil: new Date(request.body.validUntil)
+  // Create campaign
+  fastify.post('/', {
+    schema: {
+      body: {
+        type: 'object',
+        required: ['protocol', 'objective', 'rewardToken', 'rewardType', 'amount', 'validUntil'],
+        properties: {
+          protocol: { type: 'string' },
+          objective: { type: 'string' },
+          rewardToken: { type: 'string' },
+          rewardType: { type: 'string' },
+          amount: { type: 'string' },
+          validUntil: { type: 'string' }
+        }
       }
+    }
+  }, async function (request, reply) {
+    const { address } = request.cookies.siwe ? JSON.parse(request.cookies.siwe) : {}
+    if (!address) {
+      return reply.status(401).send({ error: 'Not authenticated' })
+    }
+
+    // Get venue ID for the authenticated user
+    const venue = await fastify.prisma.venue.findUnique({
+      where: { address: address.toLowerCase() }
     })
 
-    // Notify indexer about new campaign
-    await fastify.messageBus.publish(Topics.NEW_CAMPAIGN, campaign)
+    if (!venue) {
+      return reply.status(403).send({ error: 'Not authorized' })
+    }
 
-    return campaign
+    try {
+      const campaign = await fastify.prisma.campaign.create({
+        data: {
+          ...request.body as CreateCampaignBody,
+          venueId: venue.id,
+          amount: BigInt(request.body.amount),
+          validUntil: new Date(request.body.validUntil)
+        }
+      })
+
+      return reply.send(campaign)
+    } catch (error) {
+      console.error('Campaign creation error:', error)
+      return reply.status(500).send({ error: 'Failed to create campaign' })
+    }
   })
 
-  fastify.get('/', async function (
-    request: FastifyRequest,
-    reply: FastifyReply
-  ) {
-    return fastify.prisma.campaign.findMany({
+  // Get all campaigns for venue
+  fastify.get('/', async function (request, reply) {
+    const { address } = request.cookies.siwe ? JSON.parse(request.cookies.siwe) : {}
+    if (!address) {
+      return reply.status(401).send({ error: 'Not authenticated' })
+    }
+
+    const venue = await fastify.prisma.venue.findUnique({
+      where: { address: address.toLowerCase() }
+    })
+
+    if (!venue) {
+      return reply.status(403).send({ error: 'Not authorized' })
+    }
+
+    const campaigns = await fastify.prisma.campaign.findMany({
+      where: { venueId: venue.id },
       include: {
         permits: true
       }
     })
-  })
 
-  fastify.get<{ Params: RouteParams }>('/:id', async function (
-    request: FastifyRequest<{ Params: RouteParams }>,
-    reply: FastifyReply
-  ) {
-    const { id } = request.params
-    return fastify.prisma.campaign.findUnique({
-      where: { id },
-      include: {
-        permits: true
-      }
-    })
+    return reply.send(campaigns)
   })
 }
 

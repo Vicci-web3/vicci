@@ -7,38 +7,72 @@ import { useAuth } from '@/hooks/useAuth'
 import { ConnectButton } from '@/components/connect-button'
 import Link from 'next/link'
 
+type UserType = 'visitor' | 'venue' | null
+
 export function Header() {
   const { address } = useAccount()
   const router = useRouter()
   const { isAuthenticated, setIsAuthenticated } = useAuth()
-  const [userType, setUserType] = useState<string | null>(null)
+  const [userType, setUserType] = useState<UserType>(null)
 
   useEffect(() => {
-    const checkRegistration = async () => {
-      if (!address) return
+    const checkUserType = async () => {
+      if (!address || !isAuthenticated) {
+        setUserType(null)
+        return
+      }
 
       try {
         const response = await fetch(`/api/user/status?address=${address}`)
         const data = await response.json()
-        console.log('Registration check response:', data)
-        setUserType(data.type)
+        console.log('User type check response:', {
+          address,
+          data,
+          type: data.type
+        })
+        
+        // Ensure we're getting the correct type from the API
+        if (data.type === 'visitor' || data.type === 'venue') {
+          setUserType(data.type)
+        } else {
+          console.error('Invalid user type received:', data.type)
+          setUserType(null)
+        }
       } catch (error) {
-        console.error('Registration check error:', error)
+        console.error('User type check error:', error)
+        setUserType(null)
       }
     }
 
-    checkRegistration()
-  }, [address])
+    checkUserType()
+  }, [address, isAuthenticated])
 
   const handleLogout = async () => {
     try {
+      // Clear server session
       await fetch('/api/auth/session', {
         method: 'DELETE'
       })
+
+      // Clear all local state
       setIsAuthenticated(false)
-      router.push('/register')
+      setUserType(null)
+
+      // Clear any wagmi state if needed
+      // This might help ensure wallet state is fresh on next login
+      localStorage.removeItem('wagmi.store')
+      localStorage.removeItem('wagmi.recentConnectorId')
+
+      // Navigate home
+      router.push('/')
     } catch (error) {
       console.error('Logout error:', error)
+    }
+  }
+
+  const handleDashboardClick = () => {
+    if (userType) {
+      router.push(`/dashboard/${userType}`)
     }
   }
 
@@ -53,14 +87,12 @@ export function Header() {
             Visitor Information Center
           </Link>
           {isAuthenticated && userType && (
-            <nav className="hidden md:flex space-x-4">
-              <button
-                onClick={() => router.push(`/dashboard/${userType}`)}
-                className="text-white/70 hover:text-white"
-              >
-                Dashboard
-              </button>
-            </nav>
+            <button
+              onClick={handleDashboardClick}
+              className="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700"
+            >
+              {userType.charAt(0).toUpperCase() + userType.slice(1)} Dashboard
+            </button>
           )}
         </div>
         <div className="flex items-center space-x-4">

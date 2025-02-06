@@ -9,22 +9,28 @@ const status: FastifyPluginAsync = async (fastify): Promise<void> => {
     }
 
     try {
-      // Check visitor first
-      const visitor = await fastify.prisma.visitor.findUnique({
-        where: { address: address.toLowerCase() }
-      })
+      console.log('Checking status for address:', address)
 
-      if (visitor) {
-        return reply.send({ type: 'visitor' })
-      }
-
-      // Check venue if not a visitor
+      // Check if user is a venue
       const venue = await fastify.prisma.venue.findUnique({
         where: { address: address.toLowerCase() }
       })
 
+      console.log('Venue lookup result:', venue)
+
       if (venue) {
         return reply.send({ type: 'venue' })
+      }
+
+      // Check if user is a visitor
+      const visitor = await fastify.prisma.visitor.findUnique({
+        where: { address: address.toLowerCase() }
+      })
+
+      console.log('Visitor lookup result:', visitor)
+
+      if (visitor) {
+        return reply.send({ type: 'visitor' })
       }
 
       // If neither, return null type

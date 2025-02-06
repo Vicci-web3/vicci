@@ -28,6 +28,10 @@ export function LoginForm() {
       setLoading(true)
       setError(null)
 
+      // Clear any existing state first
+      setIsAuthenticated(false)
+      localStorage.removeItem('userType')
+
       // Get nonce
       const nonceResponse = await fetch('/api/register/nonce')
       const nonce = await nonceResponse.text()
