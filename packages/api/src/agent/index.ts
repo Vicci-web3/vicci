@@ -13,7 +13,8 @@ import { getLangChainTools } from "@coinbase/agentkit-langchain";
 import { HumanMessage } from "@langchain/core/messages";
 import { MemorySaver } from "@langchain/langgraph";
 import { createReactAgent } from "@langchain/langgraph/prebuilt";
-import { Cohere } from "@langchain/cohere";
+import { ChatAnthropic } from "@langchain/anthropic";
+import { z } from 'zod';
 
 import * as fs from "fs";
 import * as readline from "readline";
@@ -28,16 +29,22 @@ interface AgentConfig {
     actionProviders: any[];
 }
 
-class CoinbaseAgent {
+export default class CoinbaseAgent {
     private agent: any;
     private config: any;
     private rl: readline.Interface | null = null;
     private agentType: AgentType;
     
     constructor(type: AgentType = 'counsellor') {
+        console.log(`Creating new CoinbaseAgent of type: ${type}`)
         this.agentType = type;
-        this.validateEnvironment();
-        this.initialize();
+        try {
+            this.validateEnvironment();
+            this.initialize();
+        } catch (error) {
+            console.error('Failed to create CoinbaseAgent:', error)
+            throw error;
+        }
     }
 
     private getAgentConfig(): AgentConfig {
@@ -101,39 +108,41 @@ class CoinbaseAgent {
     }
 
     private validateEnvironment(): void {
+        console.log('Validating environment variables...')
         const missingVars: string[] = [];
 
         const requiredVars = [
-            "COHERE_API_KEY",
+            "ANTHROPIC_API_KEY",
             "CDP_API_KEY_NAME", 
             "CDP_API_KEY_PRIVATE_KEY"
         ];
 
         requiredVars.forEach(varName => {
             if (!process.env[varName]) {
+                console.warn(`Missing environment variable: ${varName}`)
                 missingVars.push(varName);
             }
         });
 
         if (missingVars.length > 0) {
-            console.error("Error: Required environment variables are not set");
-            missingVars.forEach(varName => {
-                console.error(`${varName}=your_${varName.toLowerCase()}_here`);
-            });
-            throw new Error("Missing required environment variables");
+            console.error("Error: Required environment variables are not set:", missingVars)
+            throw new Error(`Missing required environment variables: ${missingVars.join(', ')}`);
         }
 
         if (!process.env.NETWORK_ID) {
             console.warn("Warning: NETWORK_ID not set, defaulting to base-sepolia testnet");
         }
+        
+        console.log('Environment validation successful')
     }
 
     private async initialize() {
+        console.log('Initializing agent...')
         try {
-            const llm = new Cohere({
-                apiKey: process.env.COHERE_API_KEY,
+            let llm = new ChatAnthropic({
+                anthropicApiKey: process.env.ANTHROPIC_API_KEY,
                 temperature: 0,
-                model: "command"
+                modelName: "claude-3-sonnet-20240229",
             });
 
             let walletDataStr: string | null = null;
@@ -162,10 +171,12 @@ class CoinbaseAgent {
             });
 
             const tools = await getLangChainTools(agentkit);
+            console.log(tools)
+
             const memory = new MemorySaver();
             this.config = { configurable: { thread_id: `CDP ${this.agentType} Agent` } };
 
-            this.agent = createReactAgent({
+            this.agent = await createReactAgent({
                 llm,
                 tools,
                 checkpointSaver: memory,
@@ -175,8 +186,9 @@ class CoinbaseAgent {
             const exportedWallet = await walletProvider.exportWallet();
             fs.writeFileSync(WALLET_DATA_FILE, JSON.stringify(exportedWallet));
 
+            console.log('Agent initialized successfully')
         } catch (error) {
-            console.error("Failed to initialize agent:", error);
+            console.error('Failed to initialize agent:', error)
             throw error;
         }
     }
@@ -216,12 +228,27 @@ class CoinbaseAgent {
     public async processUserInput(input: string, callback?: (chunk: any) => void): Promise<string[]> {
         const responses: string[] = [];
         try {
-            const stream = await this.agent.stream(
+            console.log('Starting to process input:', input);
+            const timeoutPromise = new Promise((_, reject) => {
+                setTimeout(() => reject(new Error('Processing timeout')), 30000);
+            });
+
+            const streamPromise = this.agent.stream(
                 { messages: [new HumanMessage(input)] }, 
                 this.config
             );
 
+            const stream = await Promise.race([streamPromise, timeoutPromise]);
+            console.log('Got stream, starting to process chunks');
+
+            let chunkCount = 0;
             for await (const chunk of stream) {
+                console.log('Processing chunk:', chunk);
+                chunkCount++;
+                if (chunkCount > 100) {
+                    throw new Error('Too many chunks received');
+                }
+
                 let content = '';
                 if ("agent" in chunk) {
                     content = chunk.agent.messages[0].content;
@@ -232,19 +259,25 @@ class CoinbaseAgent {
                 if (content) {
                     responses.push(content);
                     if (callback) {
+                        console.log('Sending response through callback:', content);
                         callback({
                             type: 'chat',
-                            content
+                            success: true,
+                            message: content
                         });
-                    } else {
-                        console.log(content);
-                        console.log("-------------------");
                     }
                 }
             }
+            console.log('Finished processing all chunks');
             return responses;
         } catch (error) {
             console.error("Error processing input:", error);
+            if (callback) {
+                callback({
+                    type: 'error',
+                    message: 'Failed to process message: ' + (error instanceof Error ? error.message : 'Unknown error')
+                });
+            }
             throw error;
         }
     }
@@ -266,5 +299,3 @@ class CoinbaseAgent {
         }
     }
 }
-
-export default CoinbaseAgent;

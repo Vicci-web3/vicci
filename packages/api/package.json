@@ -18,6 +18,7 @@
     "@fastify/sensible": "^6.0.0",
     "@fastify/websocket": "^11.0.2",
     "@joggr/fastify-prisma": "^5.0.0",
+    "@langchain/anthropic": "^0.3.13",
     "@langchain/cohere": "^0.3.2",
     "@langchain/core": "^0.3.37",
     "@langchain/langgraph": "^0.2.44",
@@ -26,7 +27,9 @@
     "fastify": "^5.0.0",
     "fastify-plugin": "^5.0.0",
     "siwe": "^3.0.0",
-    "viem": "^2.22.22"
+    "viem": "^2.22.22",
+    "ws": "^8.18.0",
+    "zod": "^3.24.1"
   },
   "devDependencies": {
     "@fastify/type-provider-typebox": "^3.0.0",

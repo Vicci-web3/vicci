@@ -7,6 +7,7 @@ import { useEffect } from 'react'
 import { Header } from '@/components/header'
 import { useAuth } from '@/hooks/useAuth'
 import { CampaignForm } from '@/components/campaign-form'
+import { ChatWindow } from '@/components/chat-window'
 
 export default function VenueDashboard() {
   const { address, isConnected } = useAccount()
@@ -74,6 +75,7 @@ export default function VenueDashboard() {
               </div>
             </div>
           )}
+          <ChatWindow agentType="campaignManager" />
         </div>
       </main>
     </>

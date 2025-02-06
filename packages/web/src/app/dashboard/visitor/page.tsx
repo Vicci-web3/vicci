@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation'
 import { useEffect } from 'react'
 import { Header } from '@/components/header'
 import { useAuth } from '@/hooks/useAuth'
+import { ChatWindow } from '@/components/chat-window'
 
 export default function VisitorDashboard() {
   const { address, isConnected } = useAccount()
@@ -40,6 +41,7 @@ export default function VisitorDashboard() {
             {/* Add visitor-specific content here */}
           </div>
         </div>
+        <ChatWindow agentType="counsellor" />
       </main>
     </>
   )

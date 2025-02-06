@@ -11,18 +11,17 @@ const options: AppOptions = {
 }
 
 const app: FastifyPluginAsync<AppOptions> = async (fastify, opts): Promise<void> => {
-  // Place your custom code here
-
-  // Register plugins
+  // Register plugins first
   void fastify.register(AutoLoad, {
     dir: join(__dirname, 'plugins'),
     options: opts
   })
 
-  // Register routes
+  // Then register routes
   void fastify.register(AutoLoad, {
     dir: join(__dirname, 'routes'),
-    options: opts
+    options: opts,
+    routeParams: true  // Add this to ensure route parameters are handled
   })
 }
 
