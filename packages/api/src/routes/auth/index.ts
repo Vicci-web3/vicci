@@ -1,6 +1,13 @@
 import { FastifyPluginAsync } from 'fastify'
 import { SiweMessage } from 'siwe'
 
+interface LoginBody {
+  message: string
+  signature: string
+  nonce: string
+  type: 'visitor' | 'venue'
+}
+
 const auth: FastifyPluginAsync = async (fastify): Promise<void> => {
   // Register cookie plugin
 
@@ -51,65 +58,99 @@ const auth: FastifyPluginAsync = async (fastify): Promise<void> => {
     }
   })
 
-  // Create session
-  fastify.post('/session', async function (request, reply) {
-    console.log('Session create received with body:', request.body)
-    const { message, signature, nonce } = request.body as { message: string; signature: string; nonce: string }
-    
+  // Login endpoint
+  fastify.post('/login', async function (request, reply) {
+    const { message, signature, nonce, type } = request.body as LoginBody
+    console.log('Login attempt:', { type })
+
     try {
-      console.log('Parsing message:', message)
+      // Verify SIWE message
       const siweMessage = new SiweMessage(message)
-      console.log('SIWE Message parsed:', {
-        domain: siweMessage.domain,
+      console.log('SIWE Message:', {
         address: siweMessage.address,
         nonce: siweMessage.nonce,
-        uri: siweMessage.uri
+        domain: siweMessage.domain
       })
-      
-      const verifyParams = { 
+
+      const { success, data: fields } = await siweMessage.verify({
         signature,
-        domain: 'localhost', // Hardcode to match the message domain
-        nonce: siweMessage.nonce // Use nonce from the message
-      }
-      console.log('Verify params:', verifyParams)
-
-      try {
-        const { success, data: fields } = await siweMessage.verify(verifyParams)
-        console.log('Verification result:', { success, fields })
-
-        if (!success) {
-          console.log('Verification failed')
-          return reply.status(401).send({ error: 'Invalid signature' })
-        }
-
-        // Set session cookie
-        const sessionData = JSON.stringify({ message, signature, nonce: siweMessage.nonce })
-        console.log('Setting cookie with data:', sessionData)
-        
-        reply.setCookie('siwe', sessionData, {
-          httpOnly: true,
-          secure: process.env.NODE_ENV === 'production',
-          sameSite: 'lax',
-          path: '/',
-          domain: 'localhost',
-          maxAge: 60 * 60 * 24 * 7 // 1 week
-        })
-
-        return reply.send({ 
-          authenticated: true, 
-          address: fields.address 
-        })
-      } catch (verifyError) {
-        console.error('Verification error:', verifyError)
-        return reply.status(401).send({ 
-          error: verifyError instanceof Error ? verifyError.message : 'Verification failed'
-        })
-      }
-    } catch (error) {
-      console.error('Session creation error:', error)
-      return reply.status(401).send({ 
-        error: error instanceof Error ? error.message : 'Invalid signature' 
+        domain: 'localhost',
+        nonce
       })
+
+      console.log('SIWE Verification:', { success, fields })
+
+      if (!success) {
+        console.log('SIWE verification failed')
+        return reply.status(401).send({ error: 'Invalid signature' })
+      }
+
+      // Verify user exists and type matches
+      const address = fields.address.toLowerCase()
+      console.log('Checking registration for:', { 
+        address, 
+        type,
+        originalAddress: fields.address 
+      })
+
+      let userRecord = null
+
+      if (type === 'visitor') {
+        userRecord = await fastify.prisma.visitor.findUnique({
+          where: { address }
+        })
+      } else {
+        userRecord = await fastify.prisma.venue.findUnique({
+          where: { address }
+        })
+      }
+
+      if (!userRecord) {
+        console.log('No user found:', { 
+          type, 
+          address,
+          searchedTable: type === 'visitor' ? 'Visitor' : 'Venue'
+        })
+        return reply.status(401).send({ 
+          error: `No registered ${type} found for this address` 
+        })
+      }
+
+      console.log('User found:', { userRecord, type })
+
+      // Set session cookie
+      const sessionData = {
+        message,
+        signature,
+        nonce,
+        type
+      }
+      console.log('Setting session cookie:', sessionData)
+
+      reply.setCookie('siwe', JSON.stringify(sessionData), {
+        httpOnly: true,
+        secure: process.env.NODE_ENV === 'production',
+        sameSite: 'lax',
+        path: '/',
+        domain: 'localhost',
+        maxAge: 60 * 60 * 24 * 7 // 1 week
+      })
+
+      const response = { 
+        success: true,
+        type,
+        address: fields.address
+      }
+      console.log('Sending response:', response)
+
+      return reply.send(response)
+    } catch (error) {
+      console.error('Login error:', {
+        error,
+        stack: error instanceof Error ? error.stack : undefined,
+        message: error instanceof Error ? error.message : 'Unknown error'
+      })
+      return reply.status(500).send({ error: 'Login failed' })
     }
   })
 

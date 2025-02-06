@@ -1,10 +1,23 @@
 -- CreateTable
+CREATE TABLE "Visitor" (
+    "id" TEXT NOT NULL,
+    "address" TEXT NOT NULL,
+    "name" TEXT,
+    "email" TEXT,
+    "type" TEXT,
+    "verified" BOOLEAN NOT NULL DEFAULT false,
+    "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+
+    CONSTRAINT "Visitor_pkey" PRIMARY KEY ("id")
+);
+
+-- CreateTable
 CREATE TABLE "Venue" (
     "id" TEXT NOT NULL,
-    "name" TEXT NOT NULL,
     "address" TEXT NOT NULL,
-    "type" TEXT NOT NULL,
+    "name" TEXT NOT NULL,
     "email" TEXT,
+    "type" TEXT NOT NULL,
     "verified" BOOLEAN NOT NULL DEFAULT false,
     "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
 
@@ -27,19 +40,6 @@ CREATE TABLE "Campaign" (
 );
 
 -- CreateTable
-CREATE TABLE "Visitor" (
-    "id" TEXT NOT NULL,
-    "address" TEXT NOT NULL,
-    "name" TEXT,
-    "email" TEXT,
-    "type" TEXT,
-    "verified" BOOLEAN NOT NULL DEFAULT false,
-    "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
-
-    CONSTRAINT "Visitor_pkey" PRIMARY KEY ("id")
-);
-
--- CreateTable
 CREATE TABLE "Permit" (
     "id" TEXT NOT NULL,
     "campaignId" TEXT NOT NULL,
@@ -53,10 +53,10 @@ CREATE TABLE "Permit" (
 );
 
 -- CreateIndex
-CREATE UNIQUE INDEX "Venue_address_key" ON "Venue"("address");
+CREATE UNIQUE INDEX "Visitor_address_key" ON "Visitor"("address");
 
 -- CreateIndex
-CREATE UNIQUE INDEX "Visitor_address_key" ON "Visitor"("address");
+CREATE UNIQUE INDEX "Venue_address_key" ON "Venue"("address");
 
 -- AddForeignKey
 ALTER TABLE "Campaign" ADD CONSTRAINT "Campaign_venueId_fkey" FOREIGN KEY ("venueId") REFERENCES "Venue"("id") ON DELETE RESTRICT ON UPDATE CASCADE;

@@ -1,3 +1,6 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
 generator client {
   provider = "prisma-client-js"
 }
@@ -7,15 +10,26 @@ datasource db {
   url      = env("DATABASE_URL")
 }
 
+model Visitor {
+  id        String   @id @default(cuid())
+  address   String   @unique
+  name      String?
+  email     String?
+  type      String?
+  verified  Boolean  @default(false)
+  createdAt DateTime @default(now())
+  permits   Permit[]
+}
+
 model Venue {
-  id          String     @id @default(uuid())
-  name        String
-  address     String     @unique
-  type        String
-  email       String?
-  verified    Boolean    @default(false)
-  createdAt   DateTime   @default(now())
-  campaigns   Campaign[]
+  id        String     @id @default(cuid())
+  address   String     @unique
+  name      String
+  email     String?
+  type      String
+  verified  Boolean    @default(false)
+  createdAt DateTime   @default(now())
+  campaigns Campaign[]
 }
 
 model Campaign {
@@ -28,17 +42,6 @@ model Campaign {
   rewardType  String
   amount      BigInt
   validUntil  DateTime
-  createdAt   DateTime  @default(now())
-  permits     Permit[]
-}
-
-model Visitor {
-  id          String    @id @default(uuid())
-  address     String    @unique
-  name        String?
-  email       String?
-  type        String?
-  verified    Boolean   @default(false)
   createdAt   DateTime  @default(now())
   permits     Permit[]
 }

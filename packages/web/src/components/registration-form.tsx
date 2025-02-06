@@ -91,80 +91,67 @@ export function RegistrationForm() {
       setLoading(true)
       setError(null)
 
-      // Validate form data first
-      if (registerType === 'venue' && (!formData.name || !formData.address || !formData.type)) {
-        throw new Error('Please fill in all required fields')
-      }
-
-      if (registerType === 'visitor' && !formData.address) {
-        throw new Error('Wallet address is required')
-      }
-
-      // Get nonce first
+      // Get nonce
       const nonceResponse = await fetch('/api/register/nonce')
       const nonce = await nonceResponse.text()
 
-      // Create SIWE message with the nonce
+      // Create SIWE message
       const message = new SiweMessage({
         domain: 'localhost',
         address,
-        statement: 'Sign in with Ethereum to register with Visitor Information Center',
+        statement: `Register with Ethereum to access Visitor Information Center as ${registerType}`,
         uri: window.location.origin,
         version: '1',
         chainId: chainId || 1,
         nonce,
         issuedAt: new Date().toISOString(),
         expirationTime: new Date(Date.now() + 1000 * 60 * 5).toISOString(),
-      }).prepareMessage()
-      
-      const signature = await signMessageAsync({ message })
+      })
+
+      const preparedMessage = message.prepareMessage()
+      console.log('Prepared SIWE message:', preparedMessage)
+
+      // Sign message
+      const signature = await signMessageAsync({ message: preparedMessage })
       if (!signature) {
         throw new Error('No signature received')
       }
 
-      // Register with SIWE credentials
+      console.log('Registration payload:', {
+        message: preparedMessage,
+        signature,
+        nonce,
+        email: formData.email,
+        name: formData.name,
+        type: registerType
+      })
+
+      // Register
       const response = await fetch('/api/register', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
         },
         body: JSON.stringify({
-          type: registerType,
-          data: {
-            ...formData,
-            address: registerType === 'visitor' ? address : formData.address,
-            name: formData.name,
-            email: formData.email,
-            type: registerType === 'venue' ? formData.type : undefined,
-          },
-          auth: {
-            message,
-            signature,
-            nonce
-          }
+          message: preparedMessage,
+          signature,
+          nonce,
+          email: formData.email,
+          name: formData.name,
+          type: registerType
         }),
       })
 
-      const responseData = await response.json()
+      const data = await response.json()
       if (!response.ok) {
-        throw new Error(responseData.error || 'Registration failed')
+        throw new Error(data.error || 'Registration failed')
       }
 
-      // Set authenticated state
       setIsAuthenticated(true)
-
-      // Navigate to appropriate dashboard based on registration type
-      if (responseData.success) {
-        if (responseData.visitor) {
-          router.push('/dashboard/visitor')
-        } else if (responseData.venue) {
-          router.push('/dashboard/venue')
-        }
-      }
-      
+      router.push(`/dashboard/${registerType}`)
     } catch (err) {
       console.error('Registration error:', err)
-      setError(err instanceof Error ? err.message : 'Registration failed')
+      setError(err instanceof Error ? err.message : 'Failed to register')
     } finally {
       setLoading(false)
     }
