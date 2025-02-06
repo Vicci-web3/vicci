@@ -6,6 +6,8 @@ import { SiweMessage } from 'siwe'
 import { z } from 'zod'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { useForm } from 'react-hook-form'
+import { useRouter } from 'next/navigation'
+import { useAuth } from '../hooks/useAuth'
 
 const registrationSchema = z.object({
   type: z.enum(['visitor', 'venue']),
@@ -37,11 +39,11 @@ type VenueType = typeof VENUE_TYPES[number]
 export function RegistrationForm() {
   const { address, isConnected, chainId } = useAccount()
   const { signMessageAsync } = useSignMessage()
-  const [isRegistering, setIsRegistering] = useState(false)
-  const [registerType, setRegisterType] = useState<RegisterType>('visitor')
+  const router = useRouter()
+  const { isAuthenticated: authIsAuthenticated, loading: authLoading, setIsAuthenticated } = useAuth()
   const [loading, setLoading] = useState(false)
+  const [registerType, setRegisterType] = useState<RegisterType>('visitor')
   const [error, setError] = useState<string | null>(null)
-  const [isAuthenticated, setIsAuthenticated] = useState(false)
   const [formData, setFormData] = useState({
     name: '',
     email: '',
@@ -78,29 +80,8 @@ export function RegistrationForm() {
     }))
   }
 
-  const getNonce = async () => {
-    const response = await fetch(`${window.location.origin}/api/register/nonce`)
-    if (!response.ok) throw new Error('Failed to get nonce')
-    return response.text()
-  }
-
-  const createSiweMessage = async (address: string, statement: string) => {
-    const nonce = await getNonce()
-    const message = new SiweMessage({
-      domain: window.location.host.split(':')[0],
-      address,
-      statement,
-      uri: window.location.origin,
-      version: '1',
-      chainId: chainId || 1,
-      nonce,
-      issuedAt: new Date().toISOString(),
-      expirationTime: new Date(Date.now() + 1000 * 60 * 5).toISOString(),
-    })
-    return message.prepareMessage()
-  }
-
-  const handleSignIn = async () => {
+  const handleRegisterWithEthereum = async (e: React.FormEvent<HTMLFormElement>) => {
+    e.preventDefault()
     if (!address || !isConnected) {
       setError('Please connect your wallet first')
       return
@@ -109,78 +90,39 @@ export function RegistrationForm() {
     try {
       setLoading(true)
       setError(null)
-      
-      const message = await createSiweMessage(
-        address,
-        'Sign in with Ethereum to register with Visitor Information Center'
-      )
-      
-      console.log('SIWE Message:', message)
-      
-      try {
-        const signature = await signMessageAsync({ message })
-        console.log('Signature:', signature)
 
-        if (!signature) {
-          throw new Error('No signature received')
-        }
-
-        // Call the API verify endpoint directly
-        const response = await fetch('/api/register/verify', {  // Changed from /api/auth/verify
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-          },
-          body: JSON.stringify({
-            message,
-            signature,
-          }),
-        })
-
-        const data = await response.json()
-
-        if (!response.ok) {
-          throw new Error(data.error || 'Failed to verify signature')
-        }
-
-        if (data.success) {
-          console.log('Successfully verified signature')
-          setIsAuthenticated(true)
-          setError(null)
-          
-          // Initialize form data with the connected wallet address if visitor
-          setFormData(prev => ({
-            ...prev,
-            address: registerType === 'visitor' ? address : '',
-          }))
-        } else {
-          throw new Error('Verification failed')
-        }
-
-      } catch (err) {
-        // User rejected or signing failed
-        console.error('Signing error:', err)
-        setError('Please sign the message to continue')
-        throw err // Re-throw to be caught by outer try-catch
+      // Validate form data first
+      if (registerType === 'venue' && (!formData.name || !formData.address || !formData.type)) {
+        throw new Error('Please fill in all required fields')
       }
-    } catch (err) {
-      console.error('Sign in error:', err)
-      setError(err instanceof Error ? err.message : 'Failed to sign in')
-      setIsAuthenticated(false)
-    } finally {
-      setLoading(false)
-    }
-  }
 
-  const handleRegister = async (e: React.FormEvent<HTMLFormElement>) => {
-    e.preventDefault()
-    if (!isAuthenticated) {
-      setError('Please sign in with Ethereum first')
-      return
-    }
+      if (registerType === 'visitor' && !formData.address) {
+        throw new Error('Wallet address is required')
+      }
 
-    try {
-      setLoading(true)
+      // Get nonce first
+      const nonceResponse = await fetch('/api/register/nonce')
+      const nonce = await nonceResponse.text()
+
+      // Create SIWE message with the nonce
+      const message = new SiweMessage({
+        domain: 'localhost',
+        address,
+        statement: 'Sign in with Ethereum to register with Visitor Information Center',
+        uri: window.location.origin,
+        version: '1',
+        chainId: chainId || 1,
+        nonce,
+        issuedAt: new Date().toISOString(),
+        expirationTime: new Date(Date.now() + 1000 * 60 * 5).toISOString(),
+      }).prepareMessage()
+      
+      const signature = await signMessageAsync({ message })
+      if (!signature) {
+        throw new Error('No signature received')
+      }
+
+      // Register with SIWE credentials
       const response = await fetch('/api/register', {
         method: 'POST',
         headers: {
@@ -188,22 +130,37 @@ export function RegistrationForm() {
         },
         body: JSON.stringify({
           type: registerType,
-          data: formData,
+          data: {
+            ...formData,
+            address: registerType === 'visitor' ? address : formData.address,
+            name: formData.name,
+            email: formData.email,
+            type: registerType === 'venue' ? formData.type : undefined,
+          },
+          auth: {
+            message,
+            signature,
+            nonce
+          }
         }),
       })
 
       const responseData = await response.json()
-
       if (!response.ok) {
         throw new Error(responseData.error || 'Registration failed')
       }
 
-      setFormData({
-        name: '',
-        email: '',
-        address: registerType === 'visitor' ? (address || '') : '',
-        type: '',
-      })
+      // Set authenticated state
+      setIsAuthenticated(true)
+
+      // Navigate to appropriate dashboard based on registration type
+      if (responseData.success) {
+        if (responseData.visitor) {
+          router.push('/dashboard/visitor')
+        } else if (responseData.venue) {
+          router.push('/dashboard/venue')
+        }
+      }
       
     } catch (err) {
       console.error('Registration error:', err)
@@ -213,6 +170,18 @@ export function RegistrationForm() {
     }
   }
 
+  // Render loading state at the end
+  if (authLoading) {
+    return (
+      <div className="max-w-md mx-auto p-6 bg-white/5 backdrop-blur-sm rounded-lg border border-white/10">
+        <div className="text-center text-white">
+          <p className="mb-4">Loading...</p>
+        </div>
+      </div>
+    )
+  }
+
+  // Main render
   return (
     <div className="max-w-md mx-auto p-6 bg-white/5 backdrop-blur-sm rounded-lg border border-white/10">
       {!isConnected ? (
@@ -221,165 +190,146 @@ export function RegistrationForm() {
         </div>
       ) : (
         <>
-          {!isAuthenticated ? (
-            <div className="text-center">
+          <div className="mb-6">
+            <label className="block text-sm font-medium text-white mb-2">
+              Register as:
+            </label>
+            <div className="flex gap-4">
               <button
-                onClick={handleSignIn}
-                disabled={loading}
-                className={`px-6 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 ${
-                  loading ? 'opacity-50 cursor-not-allowed' : ''
+                type="button"
+                onClick={() => handleTypeChange('visitor')}
+                className={`px-4 py-2 rounded-md ${
+                  registerType === 'visitor'
+                    ? 'bg-blue-600 text-white'
+                    : 'bg-white/10 text-white hover:bg-white/20'
                 }`}
               >
-                {loading ? 'Waiting for signature...' : 'Sign in with Ethereum'}
+                Visitor
               </button>
-              {error && (
-                <div className="mt-4 text-red-400 text-sm">{error}</div>
-              )}
+              <button
+                type="button"
+                onClick={() => handleTypeChange('venue')}
+                className={`px-4 py-2 rounded-md ${
+                  registerType === 'venue'
+                    ? 'bg-blue-600 text-white'
+                    : 'bg-white/10 text-white hover:bg-white/20'
+                }`}
+              >
+                Venue
+              </button>
             </div>
-          ) : (
-            <>
-              <div className="mb-6">
-                <label className="block text-sm font-medium text-white mb-2">
-                  Register as:
-                </label>
-                <div className="flex gap-4">
-                  <button
-                    type="button"
-                    onClick={() => handleTypeChange('visitor')}
-                    className={`px-4 py-2 rounded-md ${
-                      registerType === 'visitor'
-                        ? 'bg-blue-600 text-white'
-                        : 'bg-white/10 text-white hover:bg-white/20'
-                    }`}
-                  >
-                    Visitor
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => handleTypeChange('venue')}
-                    className={`px-4 py-2 rounded-md ${
-                      registerType === 'venue'
-                        ? 'bg-blue-600 text-white'
-                        : 'bg-white/10 text-white hover:bg-white/20'
-                    }`}
-                  >
-                    Venue
-                  </button>
-                </div>
-              </div>
+          </div>
 
-              <form onSubmit={handleRegister} className="space-y-4">
-                {registerType === 'venue' ? (
-                  <>
-                    <div>
-                      <label className="block text-sm font-medium text-white mb-1">
-                        Venue Name *
-                      </label>
-                      <input
-                        type="text"
-                        name="name"
-                        value={formData.name}
-                        onChange={handleInputChange}
-                        required
-                        className="w-full px-3 py-2 bg-white/10 border border-white/20 rounded-md text-white placeholder-white/50"
-                      />
-                    </div>
-                    <div>
-                      <label className="block text-sm font-medium text-white mb-1">
-                        Contract Address *
-                      </label>
-                      <input
-                        type="text"
-                        name="address"
-                        value={formData.address}
-                        onChange={handleInputChange}
-                        required
-                        placeholder="0x..."
-                        className="w-full px-3 py-2 bg-white/10 border border-white/20 rounded-md text-white placeholder-white/50"
-                      />
-                    </div>
-                    <div>
-                      <label className="block text-sm font-medium text-white mb-1">
-                        Venue Type *
-                      </label>
-                      <select
-                        name="type"
-                        value={formData.type}
-                        onChange={handleInputChange}
-                        required
-                        className="w-full px-3 py-2 bg-white/10 border border-white/20 rounded-md text-white"
-                      >
-                        <option value="" className="bg-gray-800">Select a type...</option>
-                        {VENUE_TYPES.map((type) => (
-                          <option 
-                            key={type} 
-                            value={type}
-                            className="bg-gray-800"
-                          >
-                            {type}
-                          </option>
-                        ))}
-                      </select>
-                    </div>
-                  </>
-                ) : (
-                  <>
-                    <div>
-                      <label className="block text-sm font-medium text-white mb-1">
-                        Wallet Address
-                      </label>
-                      <input
-                        type="text"
-                        name="address"
-                        value={formData.address}
-                        readOnly
-                        className="w-full px-3 py-2 bg-white/5 border border-white/20 rounded-md text-white/70"
-                      />
-                    </div>
-                    <div>
-                      <label className="block text-sm font-medium text-white mb-1">
-                        Name
-                      </label>
-                      <input
-                        type="text"
-                        name="name"
-                        value={formData.name}
-                        onChange={handleInputChange}
-                        className="w-full px-3 py-2 bg-white/10 border border-white/20 rounded-md text-white placeholder-white/50"
-                      />
-                    </div>
-                  </>
-                )}
-
+          <form onSubmit={handleRegisterWithEthereum} className="space-y-4">
+            {registerType === 'venue' ? (
+              <>
                 <div>
                   <label className="block text-sm font-medium text-white mb-1">
-                    Email
+                    Venue Name *
                   </label>
                   <input
-                    type="email"
-                    name="email"
-                    value={formData.email}
+                    type="text"
+                    name="name"
+                    value={formData.name}
+                    onChange={handleInputChange}
+                    required
+                    className="w-full px-3 py-2 bg-white/10 border border-white/20 rounded-md text-white placeholder-white/50"
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-white mb-1">
+                    Contract Address *
+                  </label>
+                  <input
+                    type="text"
+                    name="address"
+                    value={formData.address}
+                    onChange={handleInputChange}
+                    required
+                    placeholder="0x..."
+                    className="w-full px-3 py-2 bg-white/10 border border-white/20 rounded-md text-white placeholder-white/50"
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-white mb-1">
+                    Venue Type *
+                  </label>
+                  <select
+                    name="type"
+                    value={formData.type}
+                    onChange={handleInputChange}
+                    required
+                    className="w-full px-3 py-2 bg-white/10 border border-white/20 rounded-md text-white"
+                  >
+                    <option value="" className="bg-gray-800">Select a type...</option>
+                    {VENUE_TYPES.map((type) => (
+                      <option 
+                        key={type} 
+                        value={type}
+                        className="bg-gray-800"
+                      >
+                        {type}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+              </>
+            ) : (
+              <>
+                <div>
+                  <label className="block text-sm font-medium text-white mb-1">
+                    Wallet Address
+                  </label>
+                  <input
+                    type="text"
+                    name="address"
+                    value={formData.address}
+                    readOnly
+                    className="w-full px-3 py-2 bg-white/5 border border-white/20 rounded-md text-white/70"
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-white mb-1">
+                    Name
+                  </label>
+                  <input
+                    type="text"
+                    name="name"
+                    value={formData.name}
                     onChange={handleInputChange}
                     className="w-full px-3 py-2 bg-white/10 border border-white/20 rounded-md text-white placeholder-white/50"
                   />
                 </div>
+              </>
+            )}
 
-                {error && (
-                  <div className="text-red-400 text-sm">{error}</div>
-                )}
+            <div>
+              <label className="block text-sm font-medium text-white mb-1">
+                Email
+              </label>
+              <input
+                type="email"
+                name="email"
+                value={formData.email}
+                onChange={handleInputChange}
+                className="w-full px-3 py-2 bg-white/10 border border-white/20 rounded-md text-white placeholder-white/50"
+              />
+            </div>
 
-                <button
-                  type="submit"
-                  disabled={loading || !isConnected}
-                  className={`w-full py-2 px-4 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 ${
-                    (loading || !isConnected) ? 'opacity-50 cursor-not-allowed' : ''
-                  }`}
-                >
-                  {loading ? 'Registering...' : 'Register'}
-                </button>
-              </form>
-            </>
-          )}
+            {error && (
+              <div className="text-red-400 text-sm">{error}</div>
+            )}
+
+            <button
+              type="submit"
+              disabled={loading || !isConnected}
+              className={`w-full py-2 px-4 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 ${
+                (loading || !isConnected) ? 'opacity-50 cursor-not-allowed' : ''
+              }`}
+            >
+              {loading ? 'Waiting for signature...' : 'Register with Ethereum'}
+            </button>
+          </form>
         </>
       )}
     </div>

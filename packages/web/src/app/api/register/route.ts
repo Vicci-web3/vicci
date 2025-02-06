@@ -1,32 +1,43 @@
 import { NextResponse } from 'next/server'
 
+export async function GET() {
+  try {
+    const response = await fetch(`${process.env.API_URL}/api/register/nonce`)
+    const nonce = await response.text()
+    return new Response(nonce, {
+      headers: { 'Content-Type': 'text/plain' },
+    })
+  } catch (error) {
+    return NextResponse.json({ error: 'Failed to generate nonce' }, { status: 500 })
+  }
+}
+
 export async function POST(request: Request) {
   try {
     const body = await request.json()
-    const { type, data } = body
-
-    // Forward the registration request to the API service
-    const apiResponse = await fetch(`${process.env.API_URL}/api/register`, {
+    
+    // Forward request to API
+    const response = await fetch(`${process.env.API_URL}/api/register`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
       },
-      body: JSON.stringify({
-        type,
-        ...data,
-      }),
+      body: JSON.stringify(body)
     })
 
-    const responseData = await apiResponse.json()
-
-    if (!apiResponse.ok) {
-      return NextResponse.json(
-        { error: responseData.error || 'Registration failed' },
-        { status: apiResponse.status }
-      )
+    const data = await response.json()
+    
+    if (!response.ok) {
+      return NextResponse.json(data, { status: response.status })
     }
 
-    return NextResponse.json(responseData)
+    // Forward any cookies set by the API
+    const headers = new Headers()
+    if (response.headers.get('set-cookie')) {
+      headers.set('Set-Cookie', response.headers.get('set-cookie')!)
+    }
+
+    return NextResponse.json(data, { headers })
   } catch (error) {
     console.error('Registration error:', error)
     return NextResponse.json(

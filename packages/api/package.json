@@ -12,6 +12,7 @@
   },
   "dependencies": {
     "@fastify/autoload": "^6.0.0",
+    "@fastify/cookie": "^11.0.2",
     "@fastify/sensible": "^6.0.0",
     "@joggr/fastify-prisma": "^5.0.0",
     "@prisma/client": "^6.3.0",
