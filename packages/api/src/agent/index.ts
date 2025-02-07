@@ -9,15 +9,26 @@ import {
     pythActionProvider,
 } from "@coinbase/agentkit";
 
+import { ViemWalletProvider } from "@coinbase/agentkit";
+import { privateKeyToAccount } from "viem/accounts";
+import { baseSepolia } from "viem/chains";
+import { createPublicClient, http } from "viem";
+
 import { getLangChainTools } from "@coinbase/agentkit-langchain";
 import { HumanMessage } from "@langchain/core/messages";
 import { MemorySaver } from "@langchain/langgraph";
 import { createReactAgent } from "@langchain/langgraph/prebuilt";
 import { ChatAnthropic } from "@langchain/anthropic";
+import { Tool } from "@langchain/core/tools";
+import { BaseLanguageModel } from "@langchain/core/language_models/base";
+import { BaseMemory } from "@langchain/core/memory";
+import { DynamicStructuredTool } from "@langchain/core/tools";
 import { z } from 'zod';
 
 import * as fs from "fs";
 import * as readline from "readline";
+import { createWalletProvider } from '../utils/wallet-provider'
+import { vicciCampaignProvider } from '../actions/create-campaign';
 
 const WALLET_DATA_FILE = "wallet_data.txt";
 
@@ -29,31 +40,43 @@ interface AgentConfig {
     actionProviders: any[];
 }
 
+console.log('Loading agent/index.ts');
+
 export default class CoinbaseAgent {
     private agent: any;
     private config: any;
     private rl: readline.Interface | null = null;
     private agentType: AgentType;
+    private walletProvider: ViemWalletProvider
+    private tools: Tool[] = [];
+    private chain: BaseLanguageModel;
+    private memory: BaseMemory;
     
     constructor(type: AgentType = 'counsellor') {
-        console.log(`Creating new CoinbaseAgent of type: ${type}`)
+        console.log(`Creating new CoinbaseAgent of type: ${type}`);
         this.agentType = type;
+        console.log('Creating wallet provider...');
+        this.walletProvider = createWalletProvider();
+        console.log('Wallet provider created:', this.walletProvider);
         try {
             this.validateEnvironment();
             this.initialize();
         } catch (error) {
-            console.error('Failed to create CoinbaseAgent:', error)
+            console.error('Failed to create CoinbaseAgent:', error);
             throw error;
         }
     }
 
     private getAgentConfig(): AgentConfig {
+        console.log('Getting agent config...');
         const baseProviders = [
-            wethActionProvider(),
-            pythActionProvider(),
-            walletActionProvider(),
-            erc20ActionProvider(),
+            //wethActionProvider(),
+            //pythActionProvider(),
+            //walletActionProvider(),
+            //erc20ActionProvider(),
+            vicciCampaignProvider(this.walletProvider),
         ];
+        console.log('Base providers created:', baseProviders);
 
         const cdpProviders = [
             cdpApiActionProvider({
@@ -89,11 +112,8 @@ export default class CoinbaseAgent {
                 messageModifier: `
                     You are a Campaign Manager agent that can interact onchain using the Coinbase Developer Platform AgentKit.
                     Your primary role is to help venues with:
-                    - Creating and managing token-gating campaigns
-                    - Setting up reward distributions
-                    - Managing venue credentials
-                    - Monitoring campaign metrics
-                    - Handling token distributions
+                    - Deploying new campaign by sending the appropriate transaction to the VicciFactory contract.
+                    - collecting campaign name, reward token address, venue address, initial reward pool, deadline
                     
                     If you ever need funds, you can request them from the faucet if you are on network ID 'base-sepolia'.
                     Before executing your first action, get the wallet details to see what network you're on.
@@ -137,9 +157,9 @@ export default class CoinbaseAgent {
     }
 
     private async initialize() {
-        console.log('Initializing agent...')
+        console.log('Initializing agent...');
         try {
-            let llm = new ChatAnthropic({
+            const llm = new ChatAnthropic({
                 anthropicApiKey: process.env.ANTHROPIC_API_KEY,
                 temperature: 0,
                 modelName: "claude-3-sonnet-20240229",
@@ -171,24 +191,51 @@ export default class CoinbaseAgent {
             });
 
             const tools = await getLangChainTools(agentkit);
-            console.log(tools)
-
-            const memory = new MemorySaver();
+            this.tools = tools;
+            this.chain = llm;
+            this.memory = new MemorySaver();
+            
             this.config = { configurable: { thread_id: `CDP ${this.agentType} Agent` } };
-
-            this.agent = await createReactAgent({
+            console.log('***Tools***:', tools);
+            this.agent = createReactAgent({
                 llm,
                 tools,
-                checkpointSaver: memory,
                 messageModifier: agentConfig.messageModifier,
             });
 
             const exportedWallet = await walletProvider.exportWallet();
             fs.writeFileSync(WALLET_DATA_FILE, JSON.stringify(exportedWallet));
 
-            console.log('Agent initialized successfully')
+            // Initialize tools with wallet provider
+            this.tools = [
+                new DynamicStructuredTool({
+                    name: 'CdpWalletActionProvider_deploy_token',
+                    description: 'This tool will deploy an ERC20 token smart contract...',
+                    schema: z.object({
+                        // ... schema definition
+                    }),
+                    func: async (args) => {
+                        // Use wallet provider in tools
+                        return await this.walletProvider.deployToken(args)
+                    }
+                }),
+                new DynamicStructuredTool({
+                    name: 'CdpWalletActionProvider_trade',
+                    description: 'This tool will trade assets...',
+                    schema: z.object({
+                        // ... schema definition
+                    }),
+                    func: async (args) => {
+                        // Use wallet provider in tools
+                        return await this.walletProvider.trade(args)
+                    }
+                })
+                // ... other tools
+            ]
+
+            console.log('Agent initialized successfully');
         } catch (error) {
-            console.error('Failed to initialize agent:', error)
+            console.error('Failed to initialize agent:', error);
             throw error;
         }
     }

@@ -4,65 +4,59 @@ import { cookies } from 'next/headers'
 export async function GET() {
   try {
     const cookieStore = cookies()
-    const sessionCookie = cookieStore.get('siwe') // Changed from 'session' to 'siwe' based on logs
+    const sessionCookie = cookieStore.get('siwe')
     
     console.log('Checking existing session:', sessionCookie?.value)
     
     if (!sessionCookie) {
-      return NextResponse.json({ authenticated: false, redirect: '/register' })
+      return NextResponse.json({ 
+        authenticated: false,
+        redirect: '/login'  // Changed from /register to /login
+      })
     }
 
     // Parse the SIWE session
     const session = JSON.parse(sessionCookie.value)
     
-    const response = await fetch(`${process.env.API_URL}/api/auth/session`, {
+    // Verify session with API
+    const response = await fetch(`${process.env.API_URL}/api/auth/verify`, {
       headers: {
-        Cookie: cookieStore.toString(),
         Authorization: `Bearer ${session.signature}`,
-        'X-SIWE-Message': session.message
+        'X-SIWE-Message': session.message,
+        Cookie: cookieStore.toString()
       },
       credentials: 'include'
     })
-    
+
     if (!response.ok) {
-      console.error('API session check failed:', response.status)
-      return NextResponse.json({ 
-        authenticated: false, 
-        redirect: '/register'
-      }, { status: response.status })
+      // Clear invalid session
+      const res = NextResponse.json({ 
+        authenticated: false,
+        redirect: '/login'
+      })
+      res.cookies.set('siwe', '', { 
+        path: '/',
+        maxAge: 0,
+        httpOnly: true,
+        secure: process.env.NODE_ENV === 'production',
+        sameSite: 'strict'
+      })
+      return res
     }
 
     const data = await response.json()
-    
-    // If verification successful, return with no redirect
-    if (data.success) {
-      return NextResponse.json({ 
-        authenticated: true,
-        user: {
-          address: session.address,
-          type: session.type
-        }
-      })
-    }
-
-    // Session invalid, clear cookie and redirect
-    const res = NextResponse.json({ 
-      authenticated: false, 
-      redirect: '/register' 
+    return NextResponse.json({
+      authenticated: true,
+      user: data.user
     })
-    
-    res.headers.set(
-      'Set-Cookie',
-      'siwe=; Path=/; HttpOnly; Secure; SameSite=Strict; Max-Age=0'
-    )
-    
-    return res
+
   } catch (error) {
     console.error('Session check error:', error)
     return NextResponse.json({ 
       authenticated: false,
-      redirect: '/register'
-    }, { status: 401 })
+      redirect: '/login',
+      error: error instanceof Error ? error.message : 'Session check failed'
+    })
   }
 }
 
@@ -106,20 +100,14 @@ export async function POST(request: Request) {
 
 export async function DELETE() {
   try {
-    const response = await fetch(`${process.env.API_URL}/api/auth/session`, {
-      method: 'DELETE',
-      credentials: 'include'
+    const res = NextResponse.json({ success: true })
+    res.cookies.set('siwe', '', {
+      path: '/',
+      maxAge: 0,
+      httpOnly: true,
+      secure: process.env.NODE_ENV === 'production',
+      sameSite: 'strict'
     })
-    
-    const data = await response.json()
-    
-    // Clear the session cookie
-    const res = NextResponse.json(data)
-    res.headers.set(
-      'Set-Cookie',
-      'session=; Path=/; HttpOnly; Secure; SameSite=Strict; Max-Age=0'
-    )
-    
     return res
   } catch (error) {
     console.error('Logout error:', error)

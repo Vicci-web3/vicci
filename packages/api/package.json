@@ -2,7 +2,7 @@
   "name": "@vic/api",
   "version": "0.0.1",
   "scripts": {
-    "dev": "pnpm db:init && tsx watch --clear-screen=false src/server.ts",
+    "dev": "pnpm db:init && ts-node-dev --respawn --transpile-only src/server.ts",
     "build": "tsc",
     "test": "jest",
     "prisma:generate": "prisma generate",
@@ -26,7 +26,9 @@
     "@vic/shared": "workspace:^",
     "fastify": "^5.0.0",
     "fastify-plugin": "^5.0.0",
+    "reflect-metadata": "^0.2.2",
     "siwe": "^3.0.0",
+    "ts-node-dev": "^2.0.0",
     "viem": "^2.22.22",
     "ws": "^8.18.0",
     "zod": "^3.24.1"
@@ -35,6 +37,7 @@
     "@fastify/type-provider-typebox": "^3.0.0",
     "@types/node": "^22.1.0",
     "prisma": "^6.3.0",
+    "ts-node": "^10.9.2",
     "tsx": "^4.7.0",
     "typescript": "~5.6.3"
   }

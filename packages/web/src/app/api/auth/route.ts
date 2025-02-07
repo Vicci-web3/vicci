@@ -8,7 +8,7 @@ export async function GET() {
   if (!sessionCookie) {
     return NextResponse.json({ 
       authenticated: false,
-      redirect: '/register'
+      redirect: '/login'
     })
   }
 
@@ -27,35 +27,45 @@ export async function GET() {
     })
 
     if (!response.ok) {
-      // Clear invalid session
-      const res = NextResponse.json({ 
-        authenticated: false,
-        redirect: '/register'
-      })
-      
-      res.headers.set(
-        'Set-Cookie',
-        'siwe=; Path=/; HttpOnly; Secure; SameSite=Strict; Max-Age=0'
-      )
-      
-      return res
+      throw new Error('Session verification failed')
     }
 
-    // Session valid, return user data
     const data = await response.json()
     return NextResponse.json({
       authenticated: true,
-      user: {
-        address: session.address,
-        type: session.type,
-        ...data.user
-      }
+      user: data.user
     })
+
   } catch (error) {
     console.error('Auth verification error:', error)
     return NextResponse.json({ 
       authenticated: false,
-      redirect: '/register'
+      redirect: '/login',
+      error: error instanceof Error ? error.message : 'Authentication failed'
     })
+  }
+}
+
+export async function POST(request: Request) {
+  try {
+    const body = await request.json()
+    const { message, signature } = body
+
+    // Store SIWE session
+    const res = NextResponse.json({ success: true })
+    res.cookies.set('siwe', JSON.stringify({ message, signature }), {
+      path: '/',
+      httpOnly: true,
+      secure: process.env.NODE_ENV === 'production',
+      sameSite: 'strict',
+      maxAge: 60 * 60 * 24 // 24 hours
+    })
+    return res
+
+  } catch (error) {
+    console.error('Auth error:', error)
+    return NextResponse.json({ 
+      error: error instanceof Error ? error.message : 'Authentication failed' 
+    }, { status: 500 })
   }
 } 
