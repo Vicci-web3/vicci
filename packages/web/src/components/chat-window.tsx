@@ -83,12 +83,14 @@ export function ChatWindow({ agentType }: ChatWindowProps) {
           const permitMatch = message.match(PERMIT_REQUEST_REGEX);
           if (permitMatch) {
             console.log('Found permit request in message');
-            const deadline = Math.floor(Date.now() / 1000) + 3600;
+            
+            // Use a fixed far future deadline (Year 2055)
+            const deadline = 2703166645;
             
             const permitData = {
               owner: "0x788CED731764Cf1BdBF0DA8aCEdAcA7CaE4C9997",
               spender: "0xbb7e1ceeb5c62f11ae93341bfbe5d94d407c4e71",
-              value: "1000000000000000000000",
+              value: "1000",
               nonce: 0,
               deadline
             };
@@ -242,7 +244,7 @@ export function ChatWindow({ agentType }: ChatWindowProps) {
         message: {
           owner: data.owner,
           spender: data.spender,
-          value: "1000",
+          value: data.value,
           nonce: nonce.toString(),
           deadline: data.deadline.toString()
         }
@@ -252,9 +254,10 @@ export function ChatWindow({ agentType }: ChatWindowProps) {
       
       // Try with eth_signTypedData
       const signature = await walletClient.request({
-        method: 'eth_signTypedData',
+        method: 'eth_signTypedData_v4',
         params: [data.owner, typedData]
       });
+
 
       console.log('Got signature:', signature);
 

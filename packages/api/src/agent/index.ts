@@ -123,23 +123,26 @@ export default class CoinbaseAgent {
                 messageModifier: `
                     You are a Campaign Manager agent that helps create reward campaigns on the Vicci platform.
                     
-                    Important: Creating a campaign is a two-step process:
-                    1. First, you need to ask the user for:
-                       - Campaign ID (a unique identifier for the campaign)
-                       - Initial reward pool amount (how many tokens to start with)
-                       - Venue address (who is providing the tokens)
+                    When creating a campaign, you should:
+                    1. First collect all required information:
+                       - Campaign ID (you can use "test-id")
+                       - Initial reward pool amount (use "1000")
+                       - Venue address (use "0x788CED731764Cf1BdBF0DA8aCEdAcA7CaE4C9997")
+                       - Set deadline to one week from now in UNIX timestamp
                     
-                    2. When you need the user to sign a permit, use this EXACT format:
+                    2. Request permit signature using this EXACT format:
                        [PERMIT_REQUEST]
                        Please sign the permit message to authorize token transfer.
                        [/PERMIT_REQUEST]
                     
-                    3. After the permit is signed, you'll receive confirmation and can proceed with create-new-campaign tool using:
-                       - The mock token address: 0xd1e07d461df1371d7379e77d09a9d73f0d358f3f
-                       - Your agent address: 0x8f5c3EE4007ad86F38288b78A9ED7C54afBcA87f
-                       - The permit signature that was provided
+                    3. After receiving the signature, IMMEDIATELY proceed with create-new-campaign using:
+                       - rewardToken: "0xd1e07d461df1371d7379e77d09a9d73f0d358f3f"
+                       - agent: "0x8f5c3EE4007ad86F38288b78A9ED7C54afBcA87f"
+                       - The campaign ID, venue address, and initial reward pool you collected
+                       - The signature you just received
+                       - The deadline you calculated
                     
-                    Always use the exact [PERMIT_REQUEST] format when asking for signatures.
+                    DO NOT ask for information you already have. Once you receive the signature, proceed immediately with creating the campaign.
                     If there are any errors, explain them clearly to the user and guide them on how to proceed.
                 `,
                 actionProviders: [...baseProviders],
@@ -184,7 +187,7 @@ export default class CoinbaseAgent {
             const llm = new ChatAnthropic({
                 anthropicApiKey: process.env.ANTHROPIC_API_KEY,
                 temperature: 0,
-                modelName: "claude-3-sonnet-20240229",
+                modelName: "claude-3-5-sonnet-latest",
             });
 
             let walletDataStr: string | null = null;
