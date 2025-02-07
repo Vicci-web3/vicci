@@ -43,7 +43,7 @@ export function LoginForm() {
         statement: `Sign in with Ethereum to access Visitor Information Center as ${loginType}`,
         uri: window.location.origin,
         version: '1',
-        chainId: chainId || 1,
+        chainId: 84532,
         nonce,
         issuedAt: new Date().toISOString(),
         expirationTime: new Date(Date.now() + 1000 * 60 * 5).toISOString(),

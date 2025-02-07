@@ -6,11 +6,23 @@ import { Textarea } from "@/components/ui/textarea"
 import { ScrollArea } from "@/components/ui/scroll-area"
 import { MessageSquare, X, Loader2 } from 'lucide-react'
 import { cn } from "@/lib/utils"
+import { useAccount, usePublicClient, useWalletClient } from 'wagmi'
+import MockERC20 from '@/lib/MockERC20.json'
 
 interface Message {
-  role: "agent" | "user" | "system"
+  role: "agent" | "user" | "system" | "action"
   content: string
   timestamp: string
+  action?: {
+    type: "permit_sign"
+    data: {
+      owner: string
+      spender: string
+      value: string
+      nonce: number
+      deadline: number
+    }
+  }
 }
 
 interface ChatWindowProps {
@@ -25,17 +37,20 @@ const getWelcomeMessage = (agentType: string): string => {
 }
 
 export function ChatWindow({ agentType }: ChatWindowProps) {
+  const { address } = useAccount()
+  const publicClient = usePublicClient()
+  const { data: walletClient } = useWalletClient()
   const [isOpen, setIsOpen] = useState(false)
   const [input, setInput] = useState("")
   const [messages, setMessages] = useState<Message[]>([])
   const [ws, setWs] = useState<WebSocket | null>(null)
   const [connecting, setConnecting] = useState(false)
   const scrollRef = useRef<HTMLDivElement>(null)
+  const PERMIT_REQUEST_REGEX = /\[PERMIT_REQUEST\](.*?)\[\/PERMIT_REQUEST\]/s;
 
   useEffect(() => {
     if (isOpen && !ws) {
       setConnecting(true)
-      console.log('Attempting WebSocket connection to:', `ws://${window.location.hostname}:3000/ws/agent`)
       const websocket = new WebSocket(`ws://${window.location.hostname}:3000/ws/agent`)
       
       websocket.onopen = () => {
@@ -62,12 +77,53 @@ export function ChatWindow({ agentType }: ChatWindowProps) {
           setConnecting(false)
         }
         else if (response.type === 'chat' && response.success) {
-          console.log('Received chat response:', response.message)
+          const message = Array.isArray(response.message) ? response.message.join('\n') : response.message;
+          console.log('Checking message for permit request:', message);
+          
+          const permitMatch = message.match(PERMIT_REQUEST_REGEX);
+          if (permitMatch) {
+            console.log('Found permit request in message');
+            const deadline = Math.floor(Date.now() / 1000) + 3600;
+            
+            const permitData = {
+              owner: "0x788CED731764Cf1BdBF0DA8aCEdAcA7CaE4C9997",
+              spender: "0xbb7e1ceeb5c62f11ae93341bfbe5d94d407c4e71",
+              value: "1000000000000000000000",
+              nonce: 0,
+              deadline
+            };
+
+            setMessages(prev => [...prev, {
+              role: 'action',
+              content: 'Please sign the permit message to allow token transfer.',
+              timestamp: new Date().toLocaleTimeString(),
+              action: {
+                type: 'permit_sign',
+                data: permitData
+              }
+            }]);
+          }
+          
           setMessages(prev => [...prev, {
             role: 'agent',
-            content: Array.isArray(response.message) ? response.message.join('\n') : response.message,
+            content: message,
             timestamp: new Date().toLocaleTimeString()
+          }]);
+        }
+        else if (response.type === 'permit_request') {
+          console.log('Received permit request:', response.data);
+          // Add message showing permit request
+          setMessages(prev => [...prev, {
+            role: 'action',
+            content: 'Please sign the permit message to allow token transfer.',
+            timestamp: new Date().toLocaleTimeString(),
+            action: {
+              type: 'permit_sign',
+              data: response.data
+            }
           }])
+          // Trigger permit signing
+          handlePermitSign(response.data)
         }
       }
 
@@ -94,7 +150,7 @@ export function ChatWindow({ agentType }: ChatWindowProps) {
         setWs(null)
       }
     }
-  }, [isOpen, agentType])
+  }, [isOpen, agentType, address])
 
   const handleSend = () => {
     if (!input.trim() || !ws || connecting) return;
@@ -135,11 +191,141 @@ export function ChatWindow({ agentType }: ChatWindowProps) {
     }
   }
 
+  const handlePermitSign = async (data: Message['action']['data']) => {
+    console.log('=== Starting Permit Sign Process ===');
+    try {
+      const mockERC20Address = MockERC20.addresses['84532']
+      
+      // Get current nonce using readContract
+      console.log('Fetching nonce for address:', data.owner);
+      const nonce = await publicClient.readContract({
+        address: mockERC20Address as `0x${string}`,
+        abi: MockERC20.abi,
+        functionName: 'nonces',
+        args: [data.owner]
+      })
+      console.log('Current nonce:', nonce);
+
+      if (!walletClient) throw new Error('Wallet not connected');
+
+      // Get domain separator from contract
+      const domainSeparator = await publicClient.readContract({
+        address: mockERC20Address as `0x${string}`,
+        abi: MockERC20.abi,
+        functionName: 'DOMAIN_SEPARATOR',
+      })
+      console.log('Domain Separator:', domainSeparator);
+      
+      const typedData = {
+        types: {
+          EIP712Domain: [
+            { name: 'name', type: 'string' },
+            { name: 'version', type: 'string' },
+            { name: 'chainId', type: 'uint256' },
+            { name: 'verifyingContract', type: 'address' }
+          ],
+          Permit: [
+            { name: 'owner', type: 'address' },
+            { name: 'spender', type: 'address' },
+            { name: 'value', type: 'uint256' },
+            { name: 'nonce', type: 'uint256' },
+            { name: 'deadline', type: 'uint256' }
+          ]
+        },
+        primaryType: 'Permit',
+        domain: {
+          name: 'MockERC20',
+          version: '1',
+          chainId: 84532,
+          verifyingContract: mockERC20Address
+        },
+        message: {
+          owner: data.owner,
+          spender: data.spender,
+          value: "1000",
+          nonce: nonce.toString(),
+          deadline: data.deadline.toString()
+        }
+      };
+
+      console.log('Signing data:', JSON.stringify(typedData, null, 2));
+      
+      // Try with eth_signTypedData
+      const signature = await walletClient.request({
+        method: 'eth_signTypedData',
+        params: [data.owner, typedData]
+      });
+
+      console.log('Got signature:', signature);
+
+      ws?.send(JSON.stringify({
+        type: 'chat',
+        message: `Signature completed: ${signature}`
+      }));
+
+      setMessages(prev => [...prev, {
+        role: 'system',
+        content: 'Permit signature provided successfully.',
+        timestamp: new Date().toLocaleTimeString()
+      }]);
+
+    } catch (error) {
+      console.error('Permit signing error:', error);
+      setMessages(prev => [...prev, {
+        role: 'system',
+        content: error instanceof Error ? 
+          `Failed to sign permit: ${error.message}` : 
+          'Failed to sign permit. Please try again.',
+        timestamp: new Date().toLocaleTimeString()
+      }]);
+    }
+  }
+
   useEffect(() => {
     if (scrollRef.current) {
       scrollRef.current.scrollTop = scrollRef.current.scrollHeight
     }
   }, [messages])
+
+  const renderMessage = (message: Message) => {
+    console.log('Rendering message:', message);
+    if (message.role === 'action' && message.action?.type === 'permit_sign') {
+      console.log('Rendering permit sign action');
+      return (
+        <div className="bg-yellow-100 dark:bg-yellow-900 p-3 rounded-lg">
+          <p>{message.content}</p>
+          <Button 
+            onClick={() => {
+              console.log('Sign permit button clicked');
+              handlePermitSign(message.action!.data);
+            }}
+            disabled={connecting}
+            className="mt-2"
+          >
+            {connecting ? (
+              <>
+                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                Signing...
+              </>
+            ) : (
+              'Sign Permit'
+            )}
+          </Button>
+        </div>
+      )
+    }
+    
+    return (
+      <div className={cn(
+        "p-3 rounded-lg",
+        message.role === "system" && "bg-muted text-muted-foreground text-center",
+        message.role === "agent" && "bg-accent text-accent-foreground",
+        message.role === "user" && "bg-primary text-primary-foreground"
+      )}>
+        <p className="text-base whitespace-pre-wrap">{message.content}</p>
+      </div>
+    )
+  }
 
   if (!isOpen) {
     return (
@@ -190,14 +376,7 @@ export function ChatWindow({ agentType }: ChatWindowProps) {
                       {message.timestamp}
                     </span>
                   </div>
-                  <div className={cn(
-                    "p-3 rounded-lg",
-                    message.role === "system" && "bg-muted text-muted-foreground text-center",
-                    message.role === "agent" && "bg-accent text-accent-foreground",
-                    message.role === "user" && "bg-primary text-primary-foreground"
-                  )}>
-                    <p className="text-base whitespace-pre-wrap">{message.content}</p>
-                  </div>
+                  {renderMessage(message)}
                 </div>
               </div>
             ))}

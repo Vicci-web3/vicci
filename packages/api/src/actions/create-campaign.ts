@@ -22,7 +22,6 @@ export const CreateCampaignSchema = z.object({
     s: z.string()
   }).describe("EIP-2612 permit signature from the venue")
 });
-console.log('CreateCampaignSchema defined:', CreateCampaignSchema);
 
 class VicciCampaignProvider extends ActionProvider<ViemWalletProvider> {
   private factoryAddress: string;
@@ -35,12 +34,23 @@ class VicciCampaignProvider extends ActionProvider<ViemWalletProvider> {
     this.walletProvider = walletProvider;
     this.factoryAddress = VicciFactoryABI.addresses["84532"];
     this.mockTokenAddress = MockERC20ABI.addresses["84532"];
-    console.log('VicciCampaignProvider constructed');
   }
 
   @CreateAction({
     name: "create-new-campaign",
-    description: "Deploys a new Vicci ERC20 rewards contract that enables AI agents to provide discount coupons to target groups. The contract allows for secure, permissioned reward distribution with signature verification.",
+    description: `
+    This tool handles the workflow to handling creating a new campaign
+    It follows two steps:
+    1. requesting an EIP-2612 permit signature from the venue that authorizes you the agent to take the reward token and paste it into the factory created reward contract
+    - the deadline is the timestamp that the signature expires (one week from now)
+    2. consuming that signature to call the deployRewardContract function on the factory contract
+    - the factory contract is:  "0xbb7e1ceeb5c62f11ae93341bfbe5d94d407c4e71"
+    - the reward token is:  "0xd1e07d461df1371d7379e77d09a9d73f0d358f3f"
+    - you are the agent: (with public key: 0x8f5c3EE4007ad86F38288b78A9ED7C54afBcA87f)
+
+    - we will need to ask the venue for the campaignId, initialRewardPool
+    - we than can call the createCampaign function that is attached to this tool
+    `,
     schema: CreateCampaignSchema,
   })
   async createCampaign(args: z.infer<typeof CreateCampaignSchema>): Promise<string> {
@@ -92,10 +102,17 @@ class VicciCampaignProvider extends ActionProvider<ViemWalletProvider> {
     }
   }
 
-  supportsNetwork = (network: Network): boolean => {
-    // Only support testnets for now
-    return network.toString().includes('sepolia');
-  };
+  supportsNetwork = (network: Network): boolean => true;
+
+  // Add this method to expose the actions
+  getActions(walletProvider: ViemWalletProvider) {
+    return [{
+      name: "create-new-campaign",
+      description: "Deploys a new Vicci ERC20 rewards contract",
+      schema: CreateCampaignSchema,
+      invoke: async (args) => this.createCampaign(args)
+    }];
+  }
 
   // Helper method to get the mock token address
   getMockTokenAddress(): string {
@@ -104,5 +121,7 @@ class VicciCampaignProvider extends ActionProvider<ViemWalletProvider> {
 }
 
 // Export a singleton instance since we don't need factory address parameter anymore
-export const vicciCampaignProvider = (walletProvider: ViemWalletProvider) => 
-  new VicciCampaignProvider(walletProvider); 
+export const vicciCampaignProvider = (walletProvider: ViemWalletProvider) => {
+  const provider = new VicciCampaignProvider(walletProvider);
+  return provider;
+} 

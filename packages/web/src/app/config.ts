@@ -1,12 +1,12 @@
 'use client'
 
 import { http, createConfig, createStorage, cookieStorage } from 'wagmi'
-import { base, baseSepolia } from 'wagmi/chains'
+import { baseSepolia } from 'wagmi/chains'
 import { coinbaseWallet } from 'wagmi/connectors'
 
 export function getConfig() {
     return createConfig({
-        chains: [base, baseSepolia],
+        chains: [baseSepolia],
         connectors: [
             coinbaseWallet({
                 appName: 'Vic',
@@ -19,7 +19,6 @@ export function getConfig() {
         }),
         //ssr: true,
         transports: {
-            [base.id]: http(),
             [baseSepolia.id]: http(),
         },
     })

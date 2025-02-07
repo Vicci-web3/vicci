@@ -42,6 +42,11 @@ interface AgentConfig {
 
 console.log('Loading agent/index.ts');
 
+interface AgentCallbacks {
+    sendMessage: (message: string) => void;
+    requestPermit: (permitData: any) => void;
+}
+
 export default class CoinbaseAgent {
     private agent: any;
     private config: any;
@@ -51,13 +56,18 @@ export default class CoinbaseAgent {
     private tools: Tool[] = [];
     private chain: BaseLanguageModel;
     private memory: BaseMemory;
+    private callbacks: AgentCallbacks;
+    private permitSignaturePromise: Promise<string> | null = null;
+    private permitSignatureResolve: ((signature: string) => void) | null = null;
     
-    constructor(type: AgentType = 'counsellor') {
+    private static PERMIT_REQUEST_REGEX = /\[PERMIT_REQUEST\](.*?)\[\/PERMIT_REQUEST\]/s;
+
+    constructor(type: AgentType = 'counsellor', callbacks: AgentCallbacks) {
         console.log(`Creating new CoinbaseAgent of type: ${type}`);
         this.agentType = type;
         console.log('Creating wallet provider...');
         this.walletProvider = createWalletProvider();
-        console.log('Wallet provider created:', this.walletProvider);
+        this.callbacks = callbacks;
         try {
             this.validateEnvironment();
             this.initialize();
@@ -76,9 +86,9 @@ export default class CoinbaseAgent {
             //erc20ActionProvider(),
             vicciCampaignProvider(this.walletProvider),
         ];
-        console.log('Base providers created:', baseProviders);
 
         const cdpProviders = [
+            /*
             cdpApiActionProvider({
                 apiKeyName: process.env.CDP_API_KEY_NAME,
                 apiKeyPrivateKey: process.env.CDP_API_KEY_PRIVATE_KEY?.replace(/\\n/g, "\n"),
@@ -87,6 +97,7 @@ export default class CoinbaseAgent {
                 apiKeyName: process.env.CDP_API_KEY_NAME,
                 apiKeyPrivateKey: process.env.CDP_API_KEY_PRIVATE_KEY?.replace(/\\n/g, "\n"),
             }),
+            */
         ];
 
         const configs: Record<AgentType, AgentConfig> = {
@@ -110,17 +121,28 @@ export default class CoinbaseAgent {
             campaignManager: {
                 type: 'campaignManager',
                 messageModifier: `
-                    You are a Campaign Manager agent that can interact onchain using the Coinbase Developer Platform AgentKit.
-                    Your primary role is to help venues with:
-                    - Deploying new campaign by sending the appropriate transaction to the VicciFactory contract.
-                    - collecting campaign name, reward token address, venue address, initial reward pool, deadline
+                    You are a Campaign Manager agent that helps create reward campaigns on the Vicci platform.
                     
-                    If you ever need funds, you can request them from the faucet if you are on network ID 'base-sepolia'.
-                    Before executing your first action, get the wallet details to see what network you're on.
-                    If there is a 5XX error, ask the user to try again later.
-                    Be concise and helpful with your responses.
+                    Important: Creating a campaign is a two-step process:
+                    1. First, you need to ask the user for:
+                       - Campaign ID (a unique identifier for the campaign)
+                       - Initial reward pool amount (how many tokens to start with)
+                       - Venue address (who is providing the tokens)
+                    
+                    2. When you need the user to sign a permit, use this EXACT format:
+                       [PERMIT_REQUEST]
+                       Please sign the permit message to authorize token transfer.
+                       [/PERMIT_REQUEST]
+                    
+                    3. After the permit is signed, you'll receive confirmation and can proceed with create-new-campaign tool using:
+                       - The mock token address: 0xd1e07d461df1371d7379e77d09a9d73f0d358f3f
+                       - Your agent address: 0x8f5c3EE4007ad86F38288b78A9ED7C54afBcA87f
+                       - The permit signature that was provided
+                    
+                    Always use the exact [PERMIT_REQUEST] format when asking for signatures.
+                    If there are any errors, explain them clearly to the user and guide them on how to proceed.
                 `,
-                actionProviders: [...baseProviders, ...cdpProviders],
+                actionProviders: [...baseProviders],
             },
         };
 
@@ -184,9 +206,10 @@ export default class CoinbaseAgent {
 
             const walletProvider = await CdpWalletProvider.configureWithWallet(config);
             const agentConfig = this.getAgentConfig();
-
             const agentkit = await AgentKit.from({
                 walletProvider,
+                cdpApiKeyName: process.env.CDP_API_KEY_NAME,
+                cdpApiKeyPrivateKey: process.env.CDP_API_KEY_PRIVATE_KEY?.replace(/\\n/g, "\n"),
                 actionProviders: agentConfig.actionProviders,
             });
 
@@ -196,7 +219,6 @@ export default class CoinbaseAgent {
             this.memory = new MemorySaver();
             
             this.config = { configurable: { thread_id: `CDP ${this.agentType} Agent` } };
-            console.log('***Tools***:', tools);
             this.agent = createReactAgent({
                 llm,
                 tools,
@@ -205,33 +227,6 @@ export default class CoinbaseAgent {
 
             const exportedWallet = await walletProvider.exportWallet();
             fs.writeFileSync(WALLET_DATA_FILE, JSON.stringify(exportedWallet));
-
-            // Initialize tools with wallet provider
-            this.tools = [
-                new DynamicStructuredTool({
-                    name: 'CdpWalletActionProvider_deploy_token',
-                    description: 'This tool will deploy an ERC20 token smart contract...',
-                    schema: z.object({
-                        // ... schema definition
-                    }),
-                    func: async (args) => {
-                        // Use wallet provider in tools
-                        return await this.walletProvider.deployToken(args)
-                    }
-                }),
-                new DynamicStructuredTool({
-                    name: 'CdpWalletActionProvider_trade',
-                    description: 'This tool will trade assets...',
-                    schema: z.object({
-                        // ... schema definition
-                    }),
-                    func: async (args) => {
-                        // Use wallet provider in tools
-                        return await this.walletProvider.trade(args)
-                    }
-                })
-                // ... other tools
-            ]
 
             console.log('Agent initialized successfully');
         } catch (error) {
@@ -343,6 +338,62 @@ export default class CoinbaseAgent {
         if (this.rl) {
             this.rl.close();
             this.rl = null;
+        }
+    }
+
+    async requestPermitSignature(permitData: any): Promise<string> {
+        this.permitSignaturePromise = new Promise((resolve) => {
+            this.permitSignatureResolve = resolve;
+        });
+
+        // Request permit signature from frontend
+        this.callbacks.requestPermit(permitData);
+
+        // Wait for signature
+        return this.permitSignaturePromise;
+    }
+
+    async handlePermitSignature(signature: string) {
+        if (this.permitSignatureResolve) {
+            this.permitSignatureResolve(signature);
+            this.permitSignatureResolve = null;
+            this.permitSignaturePromise = null;
+        }
+    }
+
+    async handleMessage(message: string) {
+        try {
+            const responses = await this.processUserInput(message);
+            
+            for (const response of responses) {
+                const permitMatch = response.match(this.PERMIT_REQUEST_REGEX);
+                if (permitMatch) {
+                    // Calculate deadline as 1 hour from now
+                    const deadline = Math.floor(Date.now() / 1000) + 3600;
+                    
+                    // Request the permit signature with real data
+                    const permitData = {
+                        owner: "0x788CED731764Cf1BdBF0DA8aCEdAcA7CaE4C9997", // venue address
+                        spender: "0xbb7e1ceeb5c62f11ae93341bfbe5d94d407c4e71", // factory address
+                        value: "1000000000000000000000", // 1000 tokens with 18 decimals
+                        nonce: 0, // This should come from the contract
+                        deadline
+                    };
+
+                    // Send permit request to frontend
+                    this.callbacks.requestPermit(permitData);
+
+                    // Send the message without the tags
+                    const cleanMessage = response.replace(this.PERMIT_REQUEST_REGEX, permitMatch[1].trim());
+                    this.callbacks.sendMessage(cleanMessage);
+                } else {
+                    // Regular message, send as is
+                    this.callbacks.sendMessage(response);
+                }
+            }
+        } catch (error) {
+            console.error('Error handling message:', error);
+            this.callbacks.sendMessage("Sorry, there was an error processing your request.");
         }
     }
 }

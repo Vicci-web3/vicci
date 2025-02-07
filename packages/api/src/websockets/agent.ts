@@ -2,9 +2,10 @@ import { FastifyPluginAsync } from 'fastify'
 import { CoinbaseAgent } from '../agent'
 
 interface WsMessage {
-  type: 'chat' | 'init';
+  type: 'chat' | 'init' | 'permit_signature';
   agentType?: 'counsellor' | 'campaignManager';
   message?: string;
+  signature?: string;
 }
 
 const agentWebSocket: FastifyPluginAsync = async (fastify): Promise<void> => {
@@ -22,7 +23,42 @@ const agentWebSocket: FastifyPluginAsync = async (fastify): Promise<void> => {
         const data: WsMessage = JSON.parse(message);
         fastify.log.info('Parsed message:', { type: data.type, message: data.message });
 
-        // ... rest of the handler code stays the same ...
+        if (data.type === 'init') {
+          agent = new CoinbaseAgent(data.agentType!, {
+            sendMessage: (message: string) => {
+              connection.socket.send(JSON.stringify({
+                type: 'chat',
+                success: true,
+                message
+              }));
+            },
+            requestPermit: (permitData: any) => {
+              connection.socket.send(JSON.stringify({
+                type: 'permit_request',
+                data: {
+                  owner: permitData.owner,
+                  spender: permitData.spender,
+                  value: permitData.value,
+                  nonce: permitData.nonce,
+                  deadline: permitData.deadline
+                }
+              }));
+            }
+          });
+          
+          connection.socket.send(JSON.stringify({
+            type: 'init',
+            success: true
+          }));
+        } 
+        else if (data.type === 'chat' && agent) {
+          await agent.handleMessage(data.message || '');
+        }
+        else if (data.type === 'permit_signature' && agent) {
+          // Forward the signature to the agent
+          await agent.handlePermitSignature(data.signature!);
+        }
+
       } catch (error) {
         fastify.log.error('Error handling WebSocket message:', error)
         connection.socket.send(JSON.stringify({
