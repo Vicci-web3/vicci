@@ -10,14 +10,12 @@ RUN npm install -g pnpm@9.15.5
 
 # Copy root package.json and workspace files
 COPY package*.json pnpm-workspace.yaml pnpm-lock.yaml ./
-COPY packages/shared/package*.json ./packages/shared/
 COPY packages/api/package*.json ./packages/api/
 
 # Install dependencies
 RUN pnpm install --frozen-lockfile
 
 # Copy source code
-COPY packages/shared ./packages/shared
 COPY packages/api ./packages/api
 
 # Generate Prisma client

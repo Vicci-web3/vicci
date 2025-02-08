@@ -7,6 +7,7 @@ interface WsMessage {
   type: 'chat' | 'init';
   agentType?: 'counsellor' | 'campaignManager';
   message?: string;
+  visitorId?: string;
 }
 
 const ws: FastifyPluginAsync = async (fastify): Promise<void> => {
@@ -170,7 +171,7 @@ const ws: FastifyPluginAsync = async (fastify): Promise<void> => {
               if (!agent && data.agentType) {
                 fastify.log.info(`Initializing ${data.agentType} agent`)
                 try {
-                  agent = new VisitorAgent(callbacks);
+                  agent = new VisitorAgent(callbacks, data.visitorId);
                   const response = {
                     type: 'init',
                     success: true,

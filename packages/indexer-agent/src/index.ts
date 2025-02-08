@@ -1,5 +1,5 @@
 import 'dotenv/config'
-import { MessageBus, Topics, Agent, AgentConfig, AgentMetrics } from '@vic/shared'
+import { MessageBus, Topics } from './messageBus'
 import { PromptTemplate } from '@langchain/core/prompts'
 import { Document } from '@langchain/core/documents'
 import { PGVectorStore } from '@langchain/community/vectorstores/pgvector'
@@ -10,8 +10,10 @@ import { Cohere } from '@langchain/cohere'
 import { CohereEmbeddings } from '@langchain/cohere'
 
 
-interface IndexerAgentConfig extends AgentConfig {
-  id: string
+// Create a single shared MessageBus instance
+const messageBus = new MessageBus(process.env.RABBITMQ_URL || 'amqp://localhost')
+
+interface IndexerAgentConfig {
   chainId: number
   startBlock?: number
   indexingInterval: number  // Number of blocks per batch
@@ -41,11 +43,26 @@ interface GraphQLResult {
   mergedPositions: MergedPosition[]
 }
 
-class IndexerAgent implements Agent {
+interface ChatMessage {
+  type: 'user' | 'assistant'
+  role: 'venue' | 'visitor'
+  content: string
+  timestamp: string
+}
+
+interface RAGQueryResponse {
+  response: string
+  confidence: number
+  relevantDocs: {
+    content: string
+    metadata: any
+  }[]
+}
+
+class IndexerAgent {
   public readonly config: IndexerAgentConfig
-  private metrics: AgentMetrics
-  private messageBus: MessageBus
-  public readonly llm: Cohere
+  private metrics
+  private readonly llm: Cohere
   private lastIndexedPositions: Set<string> = new Set()
   private paginationRound: number = 0
   private readonly MAX_ROUNDS = 20  // Will cover 100 positions total (5 x 4 sources x 5 rounds)
@@ -83,7 +100,6 @@ class IndexerAgent implements Agent {
     }
 
     this.config = { ...defaultConfig, ...customConfig }
-    this.messageBus = new MessageBus()
     this.metrics = this.initializeMetrics()
     this.llm = new Cohere({
       apiKey: process.env.COHERE_API_KEY,
@@ -101,8 +117,7 @@ class IndexerAgent implements Agent {
       postgresConnectionOptions: {
         connectionString: process.env.DATABASE_URL,
       },
-      tableName: 'position_embeddings',
-      createTableIfNotExists: true
+      tableName: 'position_embeddings'
     })
 
     this.positionAnalysisPrompt = PromptTemplate.fromTemplate(`
@@ -120,6 +135,7 @@ class IndexerAgent implements Agent {
       Significance: (market impact)
       Recommendation: (actionable insight)
     `)
+
   }
 
   private initializeMetrics(): AgentMetrics {
@@ -134,10 +150,14 @@ class IndexerAgent implements Agent {
 
   async start() {
     this.metrics.status = 'active'
-    await this.messageBus.connect()
+    
+    // Connect to shared message bus
+    console.log('\n=== Connecting to Shared Message Bus ===')
+    await messageBus.connect()
+    console.log('✓ Successfully connected to message bus')
     
     // Announce agent startup
-    await this.messageBus.publish(Topics.AGENT_STATUS, {
+    await messageBus.publish(Topics.AGENT_STATUS, {
       agentId: this.config.id,
       status: 'started',
       config: this.config,
@@ -152,6 +172,9 @@ class IndexerAgent implements Agent {
     console.log('Responsibilities:', this.config.responsibilities)
     console.log('Outputs:', this.config.outputs)
 
+    // Set up message handlers first
+    await this.setupChatMessageHandler()
+    
     await this.setupContinuousIndexing()
     await this.setupShutdown()
   }
@@ -309,12 +332,232 @@ class IndexerAgent implements Agent {
   private async setupShutdown() {
     const shutdown = async () => {
       console.log('Shutting down indexer agent...')
-      await this.messageBus.close()
+      await messageBus.close()
       process.exit(0)
     }
 
     process.on('SIGTERM', shutdown)
     process.on('SIGINT', shutdown)
+  }
+
+  private async setupChatMessageHandler() {
+    console.log('\n=== Setting up IndexerAgent Message Handlers ===');
+    
+    // Handle chat messages
+    console.log('Subscribing to CHAT_MESSAGE topic...');
+    await messageBus.subscribe(Topics.CHAT_MESSAGE, async (message: ChatMessage) => {
+      try {
+        console.log('\n=== Processing New Chat Message for RAG ===')
+        console.log('Message Type:', message.type)
+        console.log('Role:', message.role)
+        console.log('Timestamp:', message.timestamp)
+        console.log('Content:', message.content)
+
+        // Create a document from the chat message
+        const document = new Document({
+          pageContent: message.content,
+          metadata: {
+            type: message.type,
+            role: message.role,
+            timestamp: message.timestamp
+          }
+        })
+
+        console.log('\nVectorizing Chat Message:')
+        console.log('Document:', {
+          content: document.pageContent,
+          metadata: document.metadata
+        })
+
+        // Add to vector store
+        await this.vectorStore.addDocuments([document])
+        console.log('✓ Successfully added chat message to vector store')
+
+        // Update metrics
+        await this.updateMetrics(true)
+        console.log('✓ Updated metrics')
+        console.log('=== Finished Processing Chat Message ===\n')
+      } catch (error) {
+        console.error('Error processing chat message:', error)
+        await this.updateMetrics(false)
+      }
+    });
+    console.log('✓ Successfully subscribed to CHAT_MESSAGE topic');
+
+    // Handle visitor queries for RAG-enhanced responses
+    console.log('\nSubscribing to VISITOR_QUERY topic...');
+    await messageBus.subscribe(Topics.VISITOR_QUERY, async (query: { visitorId: string, content: string }) => {
+      try {
+        console.log('\n=== Processing Visitor Query for RAG ===')
+        console.log('Visitor ID:', query.visitorId)
+        console.log('Query Content:', query.content)
+        
+        const response = await this.generateRAGResponse(query.content)
+        console.log('\nGenerated RAG Response:')
+        console.log('Confidence Score:', response.confidence)
+        console.log('Number of Supporting Docs:', response.relevantDocs.length)
+        console.log('Response:', response.response)
+        
+        // Send response back to visitor agent
+        await messageBus.publish(Topics.VISITOR_RESPONSE, {
+          visitorId: query.visitorId,
+          ...response
+        })
+        console.log('✓ Published response to visitor agent')
+
+        await this.updateMetrics(true)
+        console.log('✓ Updated metrics')
+        console.log('=== Finished Processing Visitor Query ===\n')
+      } catch (error) {
+        console.error('Error processing visitor query:', error)
+        await this.updateMetrics(false)
+      }
+    });
+    console.log('✓ Successfully subscribed to VISITOR_QUERY topic');
+    console.log('=== Message Handlers Setup Complete ===\n');
+  }
+
+  private async generateRAGResponse(query: string): Promise<RAGQueryResponse> {
+    console.log('\n=== Generating RAG Response ===')
+    console.log('Query:', query)
+
+    // Search for relevant documents with increased context
+    console.log('\nSearching Vector Store...')
+    const relevantDocs = await this.vectorStore.similaritySearch(query, 8);
+    console.log(`Found ${relevantDocs.length} relevant documents`)
+    
+    // Separate documents by type for better context organization
+    const chatHistory = relevantDocs.filter(doc => 
+      doc.metadata.type === 'user' || doc.metadata.type === 'assistant'
+    );
+    console.log(`Chat History Documents: ${chatHistory.length}`)
+    
+    const positionData = relevantDocs.filter(doc => 
+      doc.metadata.positionId !== undefined
+    );
+    console.log(`Position Data Documents: ${positionData.length}`)
+
+    // Log document summaries
+    console.log('\nChat History Summary:')
+    chatHistory.forEach((doc, i) => {
+      console.log(`${i + 1}. ${doc.metadata.role} (${doc.metadata.type}) at ${doc.metadata.timestamp}`)
+      console.log(`   Content: ${doc.pageContent.substring(0, 100)}...`)
+    })
+
+    console.log('\nPosition Data Summary:')
+    positionData.forEach((doc, i) => {
+      console.log(`${i + 1}. Position ${doc.metadata.positionId} on Chain ${doc.metadata.chainId}`)
+      console.log(`   Content: ${doc.pageContent.substring(0, 100)}...`)
+    })
+
+    // Format context with clear sections
+    console.log('\nFormatting Context...')
+    const context = `
+      VISITOR CHAT HISTORY:
+      ${chatHistory.map(doc => `
+        Role: ${doc.metadata.role} (${doc.metadata.type})
+        Time: ${doc.metadata.timestamp}
+        Content: ${doc.pageContent}
+      `).join('\n\n')}
+
+      RELEVANT ONCHAIN POSITION DATA:
+      ${positionData.map(doc => `
+        Position ID: ${doc.metadata.positionId}
+        Chain: ${doc.metadata.chainId}
+        Time: ${doc.metadata.timestamp}
+        Details: ${doc.pageContent}
+      `).join('\n\n')}
+    `;
+
+    // Enhanced prompt for Cohere
+    console.log('\nGenerating Cohere Prompt...')
+    const prompt = `
+      You are an expert blockchain data analyst and visitor counsellor. Your task is to provide 
+      data-driven insights and recommendations based on the visitor's query and available context.
+
+      CURRENT QUERY: ${query}
+
+      AVAILABLE CONTEXT:
+      ${context}
+
+      ANALYSIS INSTRUCTIONS:
+      1. Historical Interaction Analysis:
+         - Review past visitor interactions
+         - Identify key themes and preferences
+         - Note any specific blockchain interests or concerns
+
+      2. Onchain Data Analysis:
+         - Analyze relevant position data
+         - Identify patterns in liquidity movements
+         - Note any relevant market trends
+
+      3. Synthesized Insights:
+         - Combine chat history and onchain data
+         - Draw connections between visitor interests and market activity
+         - Identify opportunities based on both datasets
+
+      4. Personalized Recommendations:
+         - Provide specific, actionable recommendations
+         - Support each recommendation with data points
+         - Consider both historical preferences and current market conditions
+
+      Please provide a response that:
+      1. Demonstrates clear understanding of the visitor's interests from chat history
+      2. Incorporates relevant onchain data to support recommendations
+      3. Offers specific, actionable advice backed by data
+      4. Maintains a helpful and informative tone
+      5. Prioritizes insights that are most relevant to the current query
+
+      Format your response in clear sections:
+      1. Context Summary (brief recap of relevant history)
+      2. Data-Driven Insights (key findings from analysis)
+      3. Personalized Recommendations (specific actionable items)
+      4. Supporting Evidence (relevant data points)
+    `;
+
+    // Get response from Cohere
+    console.log('\nInvoking Cohere...')
+    const response = await this.llm.invoke(prompt);
+    console.log('✓ Received response from Cohere')
+
+    // Calculate confidence based on amount and relevance of supporting data
+    console.log('\nCalculating Confidence Score...')
+    const confidence = this.calculateConfidence(relevantDocs, query);
+    console.log('Final Confidence Score:', confidence)
+
+    console.log('=== Finished Generating RAG Response ===\n')
+
+    return {
+      response: response,
+      confidence,
+      relevantDocs: relevantDocs.map(doc => ({
+        content: doc.pageContent,
+        metadata: doc.metadata
+      }))
+    };
+  }
+
+  private calculateConfidence(docs: Document[], query: string): number {
+    // Base confidence starts at 0.5
+    let confidence = 0.5;
+
+    // Increase confidence based on number of relevant documents (up to 0.2)
+    confidence += Math.min(docs.length / 20, 0.2);
+
+    // Increase confidence if we have recent documents (up to 0.15)
+    const hasRecentDocs = docs.some(doc => {
+      const docTime = new Date(doc.metadata.timestamp).getTime();
+      const hoursSinceDoc = (Date.now() - docTime) / (1000 * 60 * 60);
+      return hoursSinceDoc < 24;
+    });
+    if (hasRecentDocs) confidence += 0.15;
+
+    // Increase confidence if we have both chat history and position data (up to 0.15)
+    const hasChatHistory = docs.some(doc => doc.metadata.type === 'user' || doc.metadata.type === 'assistant');
+    const hasPositionData = docs.some(doc => doc.metadata.positionId !== undefined);
+    if (hasChatHistory && hasPositionData) confidence += 0.15;
+
+    return Math.min(confidence, 1.0);
   }
 }
 

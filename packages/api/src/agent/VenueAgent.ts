@@ -8,6 +8,8 @@ import {
     cdpWalletActionProvider,
     pythActionProvider,
 } from "@coinbase/agentkit";
+import { MessageBus } from '../messageBus';
+import { Topics } from './VisitorAgent';
 
 import { ViemWalletProvider } from "@coinbase/agentkit";
 import { privateKeyToAccount } from "viem/accounts";
@@ -66,6 +68,7 @@ export default class VenueAgent {
     private callbacks: AgentCallbacks;
     private permitSignaturePromise: Promise<string> | null = null;
     private permitSignatureResolve: ((signature: string) => void) | null = null;
+    private messageBus: MessageBus;
     
     private static PERMIT_REQUEST_REGEX = /\[PERMIT_REQUEST\](.*?)\[\/PERMIT_REQUEST\]/s;
 
@@ -120,13 +123,8 @@ export default class VenueAgent {
         console.log('Creating wallet provider...');
         this.walletProvider = createWalletProvider();
         this.callbacks = callbacks;
-        try {
-            this.validateEnvironment();
-            this.initialize();
-        } catch (error) {
-            console.error('Failed to create CoinbaseAgent:', error);
-            throw error;
-        }
+        this.messageBus = new MessageBus();
+        this.initialize().catch(console.error);
     }
 
     private getAgentConfig(): AgentConfig {
@@ -316,6 +314,15 @@ export default class VenueAgent {
         const responses: string[] = [];
         try {
             console.log('Starting to process input:', input);
+            
+            // Publish user message to indexer
+            await this.messageBus.publish(Topics.CHAT_MESSAGE, {
+                type: 'user',
+                role: 'venue',
+                content: input,
+                timestamp: new Date().toISOString()
+            });
+
             const timeoutPromise = new Promise((_, reject) => {
                 setTimeout(() => reject(new Error('Processing timeout')), 30000);
             });
@@ -351,6 +358,14 @@ export default class VenueAgent {
                             type: 'chat',
                             success: true,
                             message: content
+                        });
+                        
+                        // Publish agent response to indexer
+                        await this.messageBus.publish(Topics.CHAT_MESSAGE, {
+                            type: 'assistant',
+                            role: 'venue',
+                            content: content,
+                            timestamp: new Date().toISOString()
                         });
                     }
                 }

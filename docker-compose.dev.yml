@@ -40,7 +40,6 @@ services:
       - .:/usr/src/app:cached
       - /usr/src/app/node_modules
       - /usr/src/app/packages/indexer-agent/node_modules
-      - /usr/src/app/packages/shared/node_modules
     environment:
       DATABASE_URL: ${INDEXER_AGENT_DATABASE_URL}
       NODE_ENV: development
@@ -56,63 +55,6 @@ services:
     env_file:
       - .env
       - .env.graph
-
-  permit_agent:
-    build:
-      context: .
-      dockerfile: packages/permit-agent/Dockerfile
-    volumes:
-      - .:/usr/src/app:cached
-      - /usr/src/app/node_modules
-      - /usr/src/app/packages/permit-agent/node_modules
-      - /usr/src/app/packages/shared/node_modules
-    environment:
-      DATABASE_URL: ${PERMIT_AGENT_DATABASE_URL}
-      NODE_ENV: development
-      RABBITMQ_URL: amqp://rabbitmq:5672
-    command: pnpm --filter @vic/permit-agent dev
-    depends_on:
-      - rabbitmq
-      - postgres
-    env_file: .env
-
-  analysis_agent:
-    build:
-      context: .
-      dockerfile: packages/analysis-agent/Dockerfile
-    volumes:
-      - .:/usr/src/app:cached
-      - /usr/src/app/node_modules
-      - /usr/src/app/packages/analysis-agent/node_modules
-      - /usr/src/app/packages/shared/node_modules
-    environment:
-      DATABASE_URL: ${ANALYSIS_AGENT_DATABASE_URL}
-      NODE_ENV: development
-      RABBITMQ_URL: amqp://rabbitmq:5672
-    command: pnpm --filter @vic/analysis-agent dev
-    depends_on:
-      - rabbitmq
-      - postgres
-    env_file: .env
-
-  counsellor_agent:
-    build:
-      context: .
-      dockerfile: packages/counsellor-agent/Dockerfile
-    volumes:
-      - .:/usr/src/app:cached
-      - /usr/src/app/node_modules
-      - /usr/src/app/packages/counsellor-agent/node_modules
-      - /usr/src/app/packages/shared/node_modules
-    environment:
-      DATABASE_URL: ${COUNSELLOR_AGENT_DATABASE_URL}
-      NODE_ENV: development
-      RABBITMQ_URL: amqp://rabbitmq:5672
-    command: pnpm --filter @vic/counsellor-agent dev
-    depends_on:
-      - rabbitmq
-      - postgres
-    env_file: .env
 
   rabbitmq:
     image: rabbitmq:3-management-alpine

@@ -1,1 +1,0 @@
-// This file can be removed since types are moved to /types/validation.ts 

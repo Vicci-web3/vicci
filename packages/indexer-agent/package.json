@@ -31,21 +31,20 @@
     "@langchain/core": "^0.3.37",
     "@prisma/client": "^6.3.0",
     "@types/pg": "^8.11.11",
-    "@vic/shared": "workspace:*",
     "@whatwg-node/fetch": "^0.10.0",
     "amqplib": "^0.10.5",
     "dotenv": "^16.4.7",
     "graphql": "^16.8.1",
     "langchain": "^0.1.25",
     "pg": "^8.13.1",
+    "tsx": "^4.7.1",
     "viem": "^2.22.19",
-    "ws": "^8.18.0",
-    "tsx": "^4.7.1"
+    "ws": "^8.18.0"
   },
   "devDependencies": {
     "@graphprotocol/client-cli": "^3.0.7",
     "@types/amqplib": "^0.10.6",
-    "@types/node": "^22.1.0",
+    "@types/node": "^22.13.0",
     "prisma": "^6.3.0",
     "typescript": "~5.6.3"
   }

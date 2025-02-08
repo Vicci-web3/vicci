@@ -31,7 +31,45 @@ import { vicciCampaignProvider } from '../actions/create-campaign';
 import { vicciCouponProvider } from '../actions/create-coupon';
 
 import { PrismaClient } from '@prisma/client';
-const WALLET_DATA_FILE = "wallet_data.txt";
+import { MessageBus } from '../messageBus';
+import { globalMessageBus } from '../server';
+
+// Define message topics
+export const Topics = {
+  CHAT_MESSAGE: 'chat.message',
+  VISITOR_QUERY: 'visitor.query',
+  VISITOR_RESPONSE: 'visitor.response',
+  AGENT_STATUS: 'agent.status'
+} as const;
+
+// Define payload types for each topic
+export interface TopicPayloadMap {
+  [Topics.CHAT_MESSAGE]: {
+    type: 'user' | 'assistant';
+    role: 'venue' | 'visitor';
+    content: string;
+    timestamp: string;
+  };
+  [Topics.VISITOR_QUERY]: {
+    visitorId: string;
+    content: string;
+  };
+  [Topics.VISITOR_RESPONSE]: {
+    visitorId: string;
+    response: string;
+    confidence: number;
+    relevantDocs: {
+      content: string;
+      metadata: any;
+    }[];
+  };
+  [Topics.AGENT_STATUS]: {
+    agentId: string;
+    status: string;
+    config: any;
+    timestamp: string;
+  };
+}
 
 type AgentType = 'counsellor' | 'campaignManager';
 
@@ -47,13 +85,27 @@ interface AgentCallbacks {
     requestPermit: (permitData: any) => void;
 }
 
+const WALLET_DATA_FILE = "wallet_data.txt";
+
+interface BoxConfig {
+  name: 'rewardAmount' | 'venueAddress';
+  regex: RegExp;
+  validator: RegExp;
+  errorMessage: string;
+}
+
 interface CurrentValues {
-    rewardAmount: string | null;
-    venueAddress: string | null;
-    rewardToken: string | null;
-    agentAddress: string | null;
-    campaignId: string | null;
-    signature: string | null;
+  rewardAmount?: string;
+  venueAddress?: string;
+}
+
+interface RAGResponse {
+  response: string
+  confidence: number
+  relevantDocs: {
+    content: string
+    metadata: any
+  }[]
 }
 
 export default class VisitorAgent {
@@ -61,75 +113,52 @@ export default class VisitorAgent {
     private prisma: PrismaClient;
     private config: any;
     private rl: readline.Interface | null = null;
-    private walletProvider: ViemWalletProvider
-    private tools: Tool[] = [];
-    private chain: BaseLanguageModel;
-    private memory: BaseMemory;
+    private walletProvider: ViemWalletProvider;
+    private tools: DynamicStructuredTool[] = [];
+    private chain!: BaseLanguageModel;
+    private memory!: BaseMemory;
     private callbacks: AgentCallbacks;
     private permitSignaturePromise: Promise<string> | null = null;
     private permitSignatureResolve: ((signature: string) => void) | null = null;
+    private messageBus: MessageBus;
+    private visitorId: string | null = null;
     
-    private static PERMIT_REQUEST_REGEX = /\[PERMIT_REQUEST\](.*?)\[\/PERMIT_REQUEST\]/s;
+    private static PERMIT_REQUEST_REGEX = /permit request for (\d+(\.\d+)?)/i;
 
-    private static AMOUNT_VALIDATOR = /^\d+$/;
+    private static AMOUNT_VALIDATOR = /^\d+(\.\d+)?$/;
     private static ADDRESS_VALIDATOR = /^0x[a-fA-F0-9]{40}$/;
 
     private currentValues: CurrentValues | null = null;
 
-    private static readonly BOX_CONFIGS = [
+    private static readonly BOX_CONFIGS: BoxConfig[] = [
         {
-            type: 'reward',
-            regex: /\[REWARD_AMOUNT\](.*?)\[\/REWARD_AMOUNT\]/,
-            validator: /^\d+$/,
-            key: 'rewardAmount' as keyof CurrentValues
+            name: 'rewardAmount',
+            regex: /reward amount:\s*(\d+(\.\d+)?)/i,
+            validator: VisitorAgent.AMOUNT_VALIDATOR,
+            errorMessage: 'Invalid reward amount format'
         },
         {
-            type: 'venue',
-            regex: /\[VENUE_ADDRESS\](.*?)\[\/VENUE_ADDRESS\]/,
-            validator: /^0x[a-fA-F0-9]{40}$/,
-            key: 'venueAddress' as keyof CurrentValues
-        },
-        {
-            type: 'rewardToken',
-            regex: /\[REWARD_TOKEN\](.*?)\[\/REWARD_TOKEN\]/,
-            validator: /^"0x[a-fA-F0-9]{40}"$/,
-            key: 'rewardToken' as keyof CurrentValues
-        },
-        {
-            type: 'agent',
-            regex: /\[AGENT_ADDRESS\](.*?)\[\/AGENT_ADDRESS\]/,
-            validator: /^"0x[a-fA-F0-9]{40}"$/,
-            key: 'agentAddress' as keyof CurrentValues
-        },
-        {
-            type: 'campaignId',
-            regex: /\[CAMPAIGN_ID\](.*?)\[\/CAMPAIGN_ID\]/,
-            validator: /^.+$/,
-            key: 'campaignId' as keyof CurrentValues
-        },
-        {
-            type: 'signature',
-            regex: /\[SIGNATURE\](.*?)\[\/SIGNATURE\]/,
-            validator: /^0x[a-fA-F0-9]+$/,
-            key: 'signature' as keyof CurrentValues
+            name: 'venueAddress',
+            regex: /venue address:\s*(0x[a-fA-F0-9]{40})/i,
+            validator: VisitorAgent.ADDRESS_VALIDATOR,
+            errorMessage: 'Invalid venue address format'
         }
     ];
 
     private static REWARD_AMOUNT_INPUT_REGEX = /(?:reward|amount|pool)\s*(?:of|:)?\s*(\d+)/i;
     private static VENUE_ADDRESS_INPUT_REGEX = /(?:venue|address|from):?\s*(0x[a-fA-F0-9]{40})/i;
 
-    constructor(callbacks: AgentCallbacks) {
+    private static instance: VisitorAgent | null = null;
+    private static currentValues: Record<string, any> = {};
+
+    constructor(callbacks: AgentCallbacks, visitorId?: string) {
         console.log('Creating wallet provider...');
         this.walletProvider = createWalletProvider();
         this.callbacks = callbacks;
         this.prisma = new PrismaClient();
-        try {
-            this.validateEnvironment();
-            this.initialize();
-        } catch (error) {
-            console.error('Failed to create CoinbaseAgent:', error);
-            throw error;
-        }
+        this.messageBus = globalMessageBus;
+        this.visitorId = visitorId || null;
+        this.initialize().catch(console.error);
     }
 
     private getAgentConfig(): AgentConfig {
@@ -197,6 +226,10 @@ export default class VisitorAgent {
     private async initialize() {
         console.log('Initializing agent...');
         try {
+            // Remove MessageBus connection since we're using the shared instance
+            console.log('\n=== Setting up VisitorAgent ===');
+            console.log('Using shared message bus instance');
+
             const llm = new ChatAnthropic({
                 anthropicApiKey: process.env.ANTHROPIC_API_KEY,
                 temperature: 0,
@@ -232,12 +265,16 @@ export default class VisitorAgent {
             });
 
             const tools = await getLangChainTools(agentkit);
-            this.tools = tools;
+            this.tools = tools as DynamicStructuredTool[];
             this.chain = llm;
-            this.memory = new MemorySaver();
+            this.memory = new MemorySaver() as unknown as BaseMemory;
 
-
-            const campainIdOptions = await this.prisma.campaign.findMany({
+            // Type-safe campaign query
+            type Campaign = {
+                objective: string;
+            };
+            
+            const campainIdOptions = await (this.prisma as any).campaign.findMany({
                 take: 50,
                 orderBy: {
                     createdAt: 'desc'
@@ -245,7 +282,7 @@ export default class VisitorAgent {
                 select: {
                     objective: true
                 }
-            }).then(campaigns => campaigns.map(c => c.objective));
+            }).then((campaigns: Campaign[]) => campaigns.map((c: Campaign) => c.objective));
             console.log('campainIdOptions', campainIdOptions)
             const messageModifier = `
                 You are a helpful Visitor Information Counsellor that can interact onchain using the Coinbase Developer Platform AgentKit.
@@ -313,16 +350,90 @@ export default class VisitorAgent {
     /**
      * Process a single user input and return the agent's response
      */
-    public async processUserInput(input: string, callback?: (chunk: any) => void): Promise<string[]> {
-        const responses: string[] = [];
+    public async processUserInput(input: string): Promise<string[]> {
         try {
-            console.log('Starting to process input:', input);
+            console.log('\n=== VisitorAgent Processing User Input ===');
+            console.log('Raw input:', input);
+
+            // Extract venue address if present
+            const venueAddressMatch = input.match(/\[VENUE_ADDRESS\](.*?)\[\/VENUE_ADDRESS\]/);
+            const venueAddress = venueAddressMatch ? venueAddressMatch[1] : null;
+            console.log('Extracted venue address:', venueAddress);
+
+            // Publish user message to indexer
+            console.log('\nPublishing message to chat.message topic...');
+            const chatMessage: TopicPayloadMap[typeof Topics.CHAT_MESSAGE] = {
+                type: 'user',
+                role: 'visitor',
+                content: input,
+                timestamp: new Date().toISOString()
+            };
+            console.log('Message payload:', chatMessage);
+            
+            await this.messageBus.publish(Topics.CHAT_MESSAGE, chatMessage);
+            console.log('✓ Successfully published to chat.message topic');
+
+            // Request RAG-enhanced context if we have a visitor ID
+            let ragResponse: RAGResponse | null = null;
+            if (this.visitorId) {
+                try {
+                    // Request RAG response
+                    const queryPayload: TopicPayloadMap[typeof Topics.VISITOR_QUERY] = {
+                        visitorId: this.visitorId,
+                        content: input
+                    };
+                    await this.messageBus.publish(Topics.VISITOR_QUERY, queryPayload);
+
+                    // Wait for response with timeout
+                    const responsePromise = new Promise<RAGResponse>((resolve) => {
+                        this.messageBus.subscribe(Topics.VISITOR_RESPONSE, async (response: TopicPayloadMap[typeof Topics.VISITOR_RESPONSE]) => {
+                            if (response.visitorId === this.visitorId) {
+                                resolve(response);
+                            }
+                            return Promise.resolve();
+                        });
+                    });
+
+                    // Wait for response with 5 second timeout
+                    ragResponse = await Promise.race([
+                        responsePromise,
+                        new Promise<null>((resolve) => setTimeout(() => resolve(null), 5000))
+                    ]);
+                } catch (error) {
+                    console.error('Error getting RAG response:', error);
+                }
+            }
+
+            // Enhance the user input with RAG context if available
+            let enhancedInput = input;
+            if (ragResponse) {
+                enhancedInput = `
+                    Original user query: ${input}
+
+                    Relevant historical context:
+                    ${ragResponse.relevantDocs.map(doc => `
+                        ${doc.content}
+                        (From ${doc.metadata.role} at ${doc.metadata.timestamp})
+                    `).join('\n')}
+
+                    Previous AI suggestion:
+                    ${ragResponse.response}
+                    (Confidence: ${ragResponse.confidence})
+
+                    Please provide a response that:
+                    1. Addresses the user's query
+                    2. Takes into account the historical context
+                    3. Maintains consistency with previous responses
+                    4. Is helpful and actionable
+                `;
+            }
+
             const timeoutPromise = new Promise((_, reject) => {
                 setTimeout(() => reject(new Error('Processing timeout')), 30000);
             });
 
             const streamPromise = this.agent.stream(
-                { messages: [new HumanMessage(input)] }, 
+                { messages: [new HumanMessage(enhancedInput)] }, 
                 this.config
             );
 
@@ -330,6 +441,7 @@ export default class VisitorAgent {
             console.log('Got stream, starting to process chunks');
 
             let chunkCount = 0;
+            const responses: string[] = [];
             for await (const chunk of stream) {
                 console.log('Processing chunk:', chunk);
                 chunkCount++;
@@ -346,26 +458,23 @@ export default class VisitorAgent {
                 
                 if (content) {
                     responses.push(content);
-                    if (callback) {
-                        console.log('Sending response through callback:', content);
-                        callback({
-                            type: 'chat',
-                            success: true,
-                            message: content
-                        });
-                    }
+                    this.callbacks.sendMessage(content);
+                    
+                    // Publish agent response to indexer
+                    const assistantMessage: TopicPayloadMap[typeof Topics.CHAT_MESSAGE] = {
+                        type: 'assistant',
+                        role: 'visitor',
+                        content: content,
+                        timestamp: new Date().toISOString()
+                    };
+                    await this.messageBus.publish(Topics.CHAT_MESSAGE, assistantMessage);
                 }
             }
             console.log('Finished processing all chunks');
             return responses;
         } catch (error) {
             console.error("Error processing input:", error);
-            if (callback) {
-                callback({
-                    type: 'error',
-                    message: 'Failed to process message: ' + (error instanceof Error ? error.message : 'Unknown error')
-                });
-            }
+            this.callbacks.sendMessage('Failed to process message: ' + (error instanceof Error ? error.message : 'Unknown error'));
             throw error;
         }
     }
@@ -460,10 +569,10 @@ export default class VisitorAgent {
             console.log('\n=== Checking Input Message ===');
             console.log('Raw message:', message);
 
-            const results = CoinbaseAgent.BOX_CONFIGS.map(config => {
+            const results = VisitorAgent.BOX_CONFIGS.map(config => {
                 const match = message.match(config.regex);
                 const matchDetails = {
-                    type: config.type,
+                    name: config.name,
                     found: !!match,
                     fullMatch: match?.[0],
                     capturedValue: match?.[1],
@@ -471,11 +580,11 @@ export default class VisitorAgent {
                 };
 
                 if (!matchDetails.found) {
-                    console.log(`⚠️ No ${config.type} found in message`);
+                    console.log(`⚠️ No ${config.name} found in message`);
                 } else if (!matchDetails.isValid) {
-                    console.log(`⚠️ Found ${config.type} but failed validation:`, matchDetails.capturedValue);
+                    console.log(`⚠️ Found ${config.name} but failed validation:`, matchDetails.capturedValue);
                 } else {
-                    console.log(`✓ Valid ${config.type} found:`, matchDetails.capturedValue);
+                    console.log(`✓ Valid ${config.name} found:`, matchDetails.capturedValue);
                 }
 
                 return {
@@ -490,7 +599,7 @@ export default class VisitorAgent {
             return {
                 matches: results,
                 matchDetails: Object.fromEntries(
-                    results.map(r => [r.config.type, r.details])
+                    results.map(r => [r.config.name, r.details])
                 )
             };
         } catch (error) {
@@ -502,13 +611,13 @@ export default class VisitorAgent {
         }
     }
 
-    private updateStoredValues(results: { config: typeof CoinbaseAgent.BOX_CONFIGS[0], match: RegExpMatchArray | null }[]) {
+    private updateStoredValues(results: { config: typeof VisitorAgent.BOX_CONFIGS[0], match: RegExpMatchArray | null }[]) {
         try {
             results.forEach(({ config, match }) => {
                 if (match && config.validator.test(match[1])) {
-                    console.log(`✓ Storing valid ${config.type}:`, match[1]);
+                    console.log(`✓ Storing valid ${config.name}:`, match[1]);
                     if (this.currentValues) {
-                        this.currentValues[config.key] = match[1];
+                        this.currentValues[config.name] = match[1];
                     }
                 }
             });
@@ -519,7 +628,7 @@ export default class VisitorAgent {
 
     private async handlePermitRequest(response: string) {
         try {
-            const permitMatch = response.match(CoinbaseAgent.PERMIT_REQUEST_REGEX);
+            const permitMatch = response.match(VisitorAgent.PERMIT_REQUEST_REGEX);
             console.log('Permit Request Match:', {
                 found: !!permitMatch,
                 match: permitMatch,
@@ -602,8 +711,8 @@ export default class VisitorAgent {
             console.log('Raw message:', message);
 
             // Extract values from raw input
-            const rewardMatch = message.match(CoinbaseAgent.REWARD_AMOUNT_INPUT_REGEX);
-            const venueMatch = message.match(CoinbaseAgent.VENUE_ADDRESS_INPUT_REGEX);
+            const rewardMatch = message.match(VisitorAgent.REWARD_AMOUNT_INPUT_REGEX);
+            const venueMatch = message.match(VisitorAgent.VENUE_ADDRESS_INPUT_REGEX);
 
             console.log('Preprocessing matches:', {
                 reward: {
@@ -617,11 +726,11 @@ export default class VisitorAgent {
             });
 
             // Validate and store values if found
-            if (rewardMatch && CoinbaseAgent.AMOUNT_VALIDATOR.test(rewardMatch[1])) {
+            if (rewardMatch && VisitorAgent.AMOUNT_VALIDATOR.test(rewardMatch[1])) {
                 console.log('✓ Found valid reward amount in input:', rewardMatch[1]);
                 this.currentValues!.rewardAmount = rewardMatch[1];
             }
-            if (venueMatch && CoinbaseAgent.ADDRESS_VALIDATOR.test(venueMatch[1])) {
+            if (venueMatch && VisitorAgent.ADDRESS_VALIDATOR.test(venueMatch[1])) {
                 console.log('✓ Found valid venue address in input:', venueMatch[1]);
                 this.currentValues!.venueAddress = venueMatch[1];
             }
