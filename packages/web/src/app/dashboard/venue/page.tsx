@@ -5,7 +5,7 @@ import { useRouter } from 'next/navigation'
 import { useEffect, useState } from 'react'
 import { Header } from '@/components/header'
 import { useAuth } from '@/hooks/useAuth'
-import { ChatWindow } from '@/components/chat-window'
+import { VenueChatWindow } from '@/components/venue-chat-window'
 import { formatAddress } from '@/lib/utils'
 
 type Campaign = {
@@ -113,7 +113,7 @@ export default function VenueDashboard() {
             )}
           </div>
 
-          <ChatWindow agentType="campaignManager" />
+          <VenueChatWindow agentType="campaignManager" />
         </div>
       </main>
     </>

@@ -3,7 +3,6 @@ import MockERC20ABI from '@/lib/MockERC20.json'
 import { useState, useEffect, useRef } from "react"
 import { Button } from "@/components/ui/button"
 import { Textarea } from "@/components/ui/textarea"
-import { ScrollArea } from "@/components/ui/scroll-area"
 import { MessageSquare, X, Loader2 } from 'lucide-react'
 import { cn } from "@/lib/utils"
 import { useAccount, usePublicClient, useWalletClient } from 'wagmi'
@@ -24,18 +23,12 @@ interface Message {
   }
 }
 
-interface ChatWindowProps {
-  agentType: 'counsellor' | 'campaignManager'
+
+const getWelcomeMessage = (): string => {
+  return "Hello! I'm your Visitor Information Counsellor. I can help you check venue access eligibility, verify credentials, and answer questions about venue requirements. How can I assist you today?"
 }
 
-const getWelcomeMessage = (agentType: string): string => {
-  if (agentType === 'counsellor') {
-    return "Hello! I'm your Visitor Information Counsellor. I can help you check venue access eligibility, verify credentials, and answer questions about venue requirements. How can I assist you today?"
-  }
-  return "Welcome! I'm your Campaign Manager assistant. I can help you create and manage token-gating campaigns, set up rewards, and handle venue credentials. What would you like to do?"
-}
-
-export function ChatWindow({ agentType }: ChatWindowProps) {
+export function VisitorChatWindow() {
   const { address } = useAccount()
   const publicClient = usePublicClient()
   const { data: walletClient } = useWalletClient()
@@ -108,19 +101,18 @@ export function ChatWindow({ agentType }: ChatWindowProps) {
   useEffect(() => {
     if (isOpen && !ws) {
       setConnecting(true)
-      const websocket = new WebSocket(`ws://${window.location.hostname}:3000/ws/agent`)
+      const websocket = new WebSocket(`ws://${window.location.hostname}:3000/ws/agent/visitor`)
       
       websocket.onopen = () => {
         console.log('WebSocket connected, initializing agent...');
         websocket.send(JSON.stringify({
           type: 'init',
-          agentType
         }));
         
         // Add welcome message
         setMessages([{
           role: 'system',
-          content: getWelcomeMessage(agentType),
+          content: getWelcomeMessage(),
           timestamp: new Date().toLocaleTimeString()
         }])
       }
@@ -222,7 +214,7 @@ export function ChatWindow({ agentType }: ChatWindowProps) {
         setWs(null)
       }
     }
-  }, [isOpen, agentType, address])
+  }, [isOpen, address])
 
   // Update reward amount when found in agent messages
   useEffect(() => {
@@ -317,9 +309,7 @@ export function ChatWindow({ agentType }: ChatWindowProps) {
     if (!input.trim() || !ws || connecting) return;
 
     // Create message with role prefix
-    const prefixedMessage = agentType === 'campaignManager' 
-      ? `venue:${address}: ${input}`
-      : `visitor:${address}: ${input}`;
+    const prefixedMessage = `visitor:${address}: ${input}`;
 
     const userMessage: Message = {
       role: 'user',
@@ -489,11 +479,11 @@ export function ChatWindow({ agentType }: ChatWindowProps) {
   }
 
   return (
-    <div className="fixed inset-0 flex  items-center justify-center">
-      <div className="w-2/3 h-[600px] bg-card text-card-foreground border bg-black shadow-lg rounded-lg flex flex-col">
+    <div className="fixed inset-0 flex items-center justify-center">
+      <div className="w-3/4 h-2/3 bg-card text-card-foreground border bg-black shadow-lg rounded-lg flex flex-col">
         <div className="p-4 border-b flex justify-between items-center bg-card">
           <h2 className="font-semibold text-lg flex items-center gap-2 text-foreground">
-            {agentType === 'counsellor' ? 'Visitor Information' : 'Campaign Manager'}
+            Visitor Information
             {connecting && <Loader2 className="h-4 w-4 animate-spin text-muted-foreground" />}
           </h2>
           <Button 
@@ -506,13 +496,13 @@ export function ChatWindow({ agentType }: ChatWindowProps) {
           </Button>
         </div>
 
-        <ScrollArea className="flex-1 p-4 bg-card" ref={scrollRef}>
+        <div className="flex-1 p-4 bg-card overflow-y-auto" ref={scrollRef}>
           <div className="space-y-4">
             {messages.map((message, index) => (
               <div
                 key={index}
                 className={cn(
-                  "flex gap-2 max-w-[80%]",
+                  "flex gap-2 max-w-[95%] mx-auto",
                   message.role === "user" && "ml-auto",
                   message.role === "system" && "mx-auto"
                 )}
@@ -531,7 +521,7 @@ export function ChatWindow({ agentType }: ChatWindowProps) {
               </div>
             ))}
           </div>
-        </ScrollArea>
+        </div>
 
         <div className="p-4 border-t bg-card">
           <form 

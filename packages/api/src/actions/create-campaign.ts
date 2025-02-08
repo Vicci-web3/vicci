@@ -5,7 +5,6 @@ import { encodeFunctionData, parseEventLogs } from "viem";
 import VicciFactoryABI from '../abi/VicciRewardERC20Factory.json';
 import MockERC20ABI from '../abi/MockERC20.json';
 import { PrismaClient } from '@prisma/client';
-
 console.log('Loading create-campaign.ts');
 
 // Define the schema for campaign creation
@@ -160,7 +159,6 @@ class VicciCampaignProvider extends ActionProvider<ViemWalletProvider> {
 
   supportsNetwork = (network: Network): boolean => true;
 
-  // Add this method to expose the actions
   getActions(walletProvider: ViemWalletProvider) {
     return [{
       name: "create-new-campaign",
@@ -175,7 +173,6 @@ class VicciCampaignProvider extends ActionProvider<ViemWalletProvider> {
     return this.mockTokenAddress;
   }
 }
-
 
 // Export a singleton instance since we don't need factory address parameter anymore
 export const vicciCampaignProvider = (walletProvider: ViemWalletProvider) => {

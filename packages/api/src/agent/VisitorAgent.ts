@@ -24,18 +24,18 @@ import { BaseLanguageModel } from "@langchain/core/language_models/base";
 import { BaseMemory } from "@langchain/core/memory";
 import { DynamicStructuredTool } from "@langchain/core/tools";
 import { z } from 'zod';
-
 import * as fs from "fs";
 import * as readline from "readline";
 import { createWalletProvider } from '../utils/wallet-provider'
 import { vicciCampaignProvider } from '../actions/create-campaign';
+import { vicciCouponProvider } from '../actions/create-coupon';
 
+import { PrismaClient } from '@prisma/client';
 const WALLET_DATA_FILE = "wallet_data.txt";
 
 type AgentType = 'counsellor' | 'campaignManager';
 
 interface AgentConfig {
-    type: AgentType;
     messageModifier: string;
     actionProviders: any[];
 }
@@ -56,11 +56,11 @@ interface CurrentValues {
     signature: string | null;
 }
 
-export default class CoinbaseAgent {
+export default class VisitorAgent {
     private agent: any;
+    private prisma: PrismaClient;
     private config: any;
     private rl: readline.Interface | null = null;
-    private agentType: AgentType;
     private walletProvider: ViemWalletProvider
     private tools: Tool[] = [];
     private chain: BaseLanguageModel;
@@ -70,10 +70,6 @@ export default class CoinbaseAgent {
     private permitSignatureResolve: ((signature: string) => void) | null = null;
     
     private static PERMIT_REQUEST_REGEX = /\[PERMIT_REQUEST\](.*?)\[\/PERMIT_REQUEST\]/s;
-    private static REWARD_AMOUNT_REGEX = /\[REWARD_AMOUNT\](.*?)\[\/REWARD_AMOUNT\]/;
-    private static VENUE_ADDRESS_REGEX = /\[VENUE_ADDRESS\](.*?)\[\/VENUE_ADDRESS\]/;
-    private static CAMPAIGN_ID_REGEX = /\[CAMPAIGN_ID\](.*?)\[\/CAMPAIGN_ID\]/;
-    private static SIGNATURE_REGEX = /\[SIGNATURE\](.*?)\[\/SIGNATURE\]/;
 
     private static AMOUNT_VALIDATOR = /^\d+$/;
     private static ADDRESS_VALIDATOR = /^0x[a-fA-F0-9]{40}$/;
@@ -122,12 +118,11 @@ export default class CoinbaseAgent {
     private static REWARD_AMOUNT_INPUT_REGEX = /(?:reward|amount|pool)\s*(?:of|:)?\s*(\d+)/i;
     private static VENUE_ADDRESS_INPUT_REGEX = /(?:venue|address|from):?\s*(0x[a-fA-F0-9]{40})/i;
 
-    constructor(type: AgentType = 'counsellor', callbacks: AgentCallbacks) {
-        console.log(`Creating new CoinbaseAgent of type: ${type}`);
-        this.agentType = type;
+    constructor(callbacks: AgentCallbacks) {
         console.log('Creating wallet provider...');
         this.walletProvider = createWalletProvider();
         this.callbacks = callbacks;
+        this.prisma = new PrismaClient();
         try {
             this.validateEnvironment();
             this.initialize();
@@ -145,6 +140,7 @@ export default class CoinbaseAgent {
             //walletActionProvider(),
             //erc20ActionProvider(),
             vicciCampaignProvider(this.walletProvider),
+            vicciCouponProvider(this.walletProvider),
         ];
 
         const cdpProviders = [
@@ -160,60 +156,13 @@ export default class CoinbaseAgent {
             */
         ];
 
-        const configs: Record<AgentType, AgentConfig> = {
-            counsellor: {
-                type: 'counsellor',
+        const config: AgentConfig = {
                 messageModifier: `
-                    You are a helpful Visitor Information Counsellor that can interact onchain using the Coinbase Developer Platform AgentKit.
-
-                    You can help visitors with:
-                    - counselling them on onchain experiences they may like
-                    - provide venue coupons and rewards for onchain experiences
-
-                    1. 
                 `,
-                actionProviders: [...baseProviders, ...cdpProviders],
-            },
-            campaignManager: {
-                type: 'campaignManager',
-                messageModifier: `
-                    You are a Campaign Manager agent that helps create reward campaigns on the Vicci platform.
-                    
-                    The campaign creation process follows two steps:
+                actionProviders: [vicciCouponProvider(this.walletProvider)],
+            }
 
-                    1. Request permit signature:
-                       [PERMIT_REQUEST]
-                       Please sign the permit message to authorize token transfer.
-                       [/PERMIT_REQUEST]
-
-                       Required parameters:
-                       [REWARD_TOKEN]"0xd1e07d461df1371d7379e77d09a9d73f0d358f3f"[/REWARD_TOKEN]
-                       [AGENT_ADDRESS]"0x8f5c3EE4007ad86F38288b78A9ED7C54afBcA87f"[/AGENT_ADDRESS]
-                       [REWARD_AMOUNT]<number>[/REWARD_AMOUNT]
-                       [VENUE_ADDRESS]<0x address>[/VENUE_ADDRESS]
-                       [CAMPAIGN_ID]<string>[/CAMPAIGN_ID]
-                       [SIGNATURE]<string>[/SIGNATURE]
-
-                    Factory contract: "0xbb7e1ceeb5c62f11ae93341bfbe5d94d407c4e71"
-                    Reward token: "0xd1e07d461df1371d7379e77d09a9d73f0d358f3f"
-                    Agent address: "0x8f5c3EE4007ad86F38288b78A9ED7C54afBcA87f"
-
-                    IMPORTANT: Always collect and validate required information in EXACT box format:
-                    [REWARD_TOKEN]"0xd1e07d461df1371d7379e77d09a9d73f0d358f3f"[/REWARD_TOKEN]
-                    [AGENT_ADDRESS]"0x8f5c3EE4007ad86F38288b78A9ED7C54afBcA87f"[/AGENT_ADDRESS]
-                    [REWARD_AMOUNT]<number>[/REWARD_AMOUNT]
-                    [VENUE_ADDRESS]<0x address>[/VENUE_ADDRESS]
-                    [CAMPAIGN_ID]<string>[/CAMPAIGN_ID]
-                    [SIGNATURE]<string>[/SIGNATURE]
-
-                    If ANY required information is missing, ask for it explicitly using these EXACT box formats.
-                    Do not proceed with permit request until ALL required information is provided.
-                `,
-                actionProviders: [vicciCampaignProvider(this.walletProvider)],
-            },
-        };
-
-        return configs[this.agentType];
+        return config;
     }
 
     private validateEnvironment(): void {
@@ -263,7 +212,7 @@ export default class CoinbaseAgent {
                     console.error("Error reading wallet data:", error);
                 }
             }
-
+            /*
             const config = {
                 apiKeyName: process.env.CDP_API_KEY_NAME,
                 apiKeyPrivateKey: process.env.CDP_API_KEY_PRIVATE_KEY?.replace(/\\n/g, "\n"),
@@ -272,28 +221,55 @@ export default class CoinbaseAgent {
             };
 
             const walletProvider = await CdpWalletProvider.configureWithWallet(config);
+            */
             const agentConfig = this.getAgentConfig();
             const agentkit = await AgentKit.from({
-                walletProvider,
+                //this.walletProvider,
                 cdpApiKeyName: process.env.CDP_API_KEY_NAME,
                 cdpApiKeyPrivateKey: process.env.CDP_API_KEY_PRIVATE_KEY?.replace(/\\n/g, "\n"),
-                actionProviders: agentConfig.actionProviders,
+                actionProviders: [vicciCouponProvider(this.walletProvider)],
             });
 
             const tools = await getLangChainTools(agentkit);
             this.tools = tools;
             this.chain = llm;
             this.memory = new MemorySaver();
+
+
+            const campainIdOptions = await this.prisma.campaign.findMany({
+                take: 50,
+                orderBy: {
+                    createdAt: 'desc'
+                },
+                select: {
+                    objective: true
+                }
+            }).then(campaigns => campaigns.map(c => c.objective));
+            console.log('campainIdOptions', campainIdOptions)
+            const messageModifier = `
+                You are a helpful Visitor Information Counsellor that can interact onchain using the Coinbase Developer Platform AgentKit.
+                You can help visitors with:
+                - counselling them on onchain experiences they may like
+                - provide venue coupons and rewards for onchain experiences
+                Required parameters:
+                [AGENT_ADDRESS]"0x8f5c3EE4007ad86F38288b78A9ED7C54afBcA87f"[/AGENT_ADDRESS]
+                [VISITOR_ADDRESS]<0x address>[/VISITOR_ADDRESS]
+                1. Before Attempting to Offer a Reward Claim you must first gather some information from the visitor.
+                2. once you have gathered some information about what sort of experiences they want to explore in blockchain you can run the create-coupon tool
+                Here is an array of options to choose from: ${campainIdOptions}
+                let them choose one option from the list and add it to the message:
+                [CAMPAIGN_ID]<campaignId>[/CAMPAIGN_ID]
+            `
             
-            this.config = { configurable: { thread_id: `CDP ${this.agentType} Agent` } };
+            this.config = { configurable: { thread_id: `CDP Visitor Agent` } };
             this.agent = createReactAgent({
                 llm,
                 tools,
-                messageModifier: agentConfig.messageModifier,
+                messageModifier: messageModifier,
             });
 
-            const exportedWallet = await walletProvider.exportWallet();
-            fs.writeFileSync(WALLET_DATA_FILE, JSON.stringify(exportedWallet));
+            //const exportedWallet = await walletProvider.exportWallet();
+            //fs.writeFileSync(WALLET_DATA_FILE, JSON.stringify(exportedWallet));
 
             console.log('Agent initialized successfully');
         } catch (error) {
@@ -306,7 +282,7 @@ export default class CoinbaseAgent {
      * Start an interactive chat session with the agent
      */
     public async startChat(): Promise<void> {
-        console.log(`Starting ${this.agentType} chat session... Type 'exit' to end.`);
+        console.log(`Starting Visitor Agent chat session... Type 'exit' to end.`);
 
         this.rl = readline.createInterface({
             input: process.stdin,
