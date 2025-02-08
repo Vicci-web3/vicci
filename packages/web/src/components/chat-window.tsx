@@ -1,5 +1,5 @@
 'use client'
-
+import MockERC20ABI from '@/lib/MockERC20.json'
 import { useState, useEffect, useRef } from "react"
 import { Button } from "@/components/ui/button"
 import { Textarea } from "@/components/ui/textarea"
@@ -8,7 +8,6 @@ import { MessageSquare, X, Loader2 } from 'lucide-react'
 import { cn } from "@/lib/utils"
 import { useAccount, usePublicClient, useWalletClient } from 'wagmi'
 import MockERC20 from '@/lib/MockERC20.json'
-
 interface Message {
   role: "agent" | "user" | "system" | "action"
   content: string
@@ -47,6 +46,64 @@ export function ChatWindow({ agentType }: ChatWindowProps) {
   const [connecting, setConnecting] = useState(false)
   const scrollRef = useRef<HTMLDivElement>(null)
   const PERMIT_REQUEST_REGEX = /\[PERMIT_REQUEST\](.*?)\[\/PERMIT_REQUEST\]/s;
+  const REWARD_AMOUNT_REGEX = /(?:\[REWARD_AMOUNT\](\d+)\[\/REWARD_AMOUNT\]|Initial reward pool amount: (\d+))/;
+  const [currentRewardAmount, setCurrentRewardAmount] = useState<string | null>(null);
+
+  // Match box patterns with agent
+  const BOX_CONFIGS = [
+    {
+      type: 'permit',
+      regex: /\[PERMIT_REQUEST\](.*?)\[\/PERMIT_REQUEST\]/s,
+      key: 'permit'
+    },
+    {
+      type: 'reward',
+      regex: /\[REWARD_AMOUNT\](.*?)\[\/REWARD_AMOUNT\]/,
+      key: 'rewardAmount'
+    },
+    {
+      type: 'venue',
+      regex: /\[VENUE_ADDRESS\](.*?)\[\/VENUE_ADDRESS\]/,
+      key: 'venueAddress'
+    },
+    {
+      type: 'rewardToken',
+      regex: /\[REWARD_TOKEN\](.*?)\[\/REWARD_TOKEN\]/,
+      key: 'rewardToken'
+    },
+    {
+      type: 'agent',
+      regex: /\[AGENT_ADDRESS\](.*?)\[\/AGENT_ADDRESS\]/,
+      key: 'agentAddress'
+    },
+    {
+      type: 'campaignId',
+      regex: /\[CAMPAIGN_ID\](.*?)\[\/CAMPAIGN_ID\]/,
+      key: 'campaignId'
+    },
+    {
+      type: 'signature',
+      regex: /\[SIGNATURE\](.*?)\[\/SIGNATURE\]/,
+      key: 'signature'
+    }
+  ] as const;
+
+  // Track all values
+  const [currentValues, setCurrentValues] = useState<{
+    rewardAmount: string | null;
+    venueAddress: string | null;
+    rewardToken: string | null;
+    agentAddress: string | null;
+    campaignId: string | null;
+    signature: string | null;
+  }>({
+    rewardAmount: null,
+    venueAddress: null,
+    rewardToken: null,
+    agentAddress: null,
+    campaignId: null,
+    signature: null
+  });
 
   useEffect(() => {
     if (isOpen && !ws) {
@@ -68,7 +125,7 @@ export function ChatWindow({ agentType }: ChatWindowProps) {
         }])
       }
 
-      websocket.onmessage = (event) => {
+      websocket.onmessage = async (event) => {
         const response = JSON.parse(event.data)
         console.log('Received WebSocket response:', response)
         
@@ -81,19 +138,32 @@ export function ChatWindow({ agentType }: ChatWindowProps) {
           console.log('Checking message for permit request:', message);
           
           const permitMatch = message.match(PERMIT_REQUEST_REGEX);
+          console.log('Permit match:', permitMatch);
+          const rewardMatch = message.match(REWARD_AMOUNT_REGEX);
+          console.log('Reward match:', rewardMatch);
           if (permitMatch) {
             console.log('Found permit request in message');
+            
+            // Extract reward amount from the message
+            const rewardAmount = rewardMatch ? rewardMatch[1] : '0';
             
             // Use a fixed far future deadline (Year 2055)
             const deadline = 2703166645;
             
             const permitData = {
-              owner: "0x788CED731764Cf1BdBF0DA8aCEdAcA7CaE4C9997",
+              owner: address as `0x${string}`,
               spender: "0xbb7e1ceeb5c62f11ae93341bfbe5d94d407c4e71",
-              value: "1000",
-              nonce: 0,
+              value: rewardAmount, // Use the extracted reward amount
+              nonce: await publicClient.readContract({
+                address: MockERC20.addresses['84532'] as `0x${string}`,
+                abi: MockERC20ABI.abi,
+                functionName: 'nonces',
+                args: [address as `0x${string}`]
+              }),
               deadline
             };
+
+            console.log('Setting permit action with data:', permitData);
 
             setMessages(prev => [...prev, {
               role: 'action',
@@ -154,28 +224,85 @@ export function ChatWindow({ agentType }: ChatWindowProps) {
     }
   }, [isOpen, agentType, address])
 
-  const handleSend = () => {
-    if (!input.trim() || !ws || connecting) return;
+  // Update reward amount when found in agent messages
+  useEffect(() => {
+    const lastMessage = messages[messages.length - 1];
+    if (lastMessage?.role === 'agent') {
+      const rewardMatch = lastMessage.content.match(REWARD_AMOUNT_REGEX);
+      if (rewardMatch) {
+        // Get the value from either capture group
+        const amount = rewardMatch[1] || rewardMatch[2];
+        console.log('Found reward amount in agent message:', amount);
+        setCurrentRewardAmount(amount);
+      }
+    }
+  }, [messages]);
 
-    const userMessage: Message = {
-      role: 'user',
-      content: input,
-      timestamp: new Date().toLocaleTimeString()
+  // Update values when found in agent messages
+  useEffect(() => {
+    const lastMessage = messages[messages.length - 1];
+    if (lastMessage?.role === 'agent') {
+      BOX_CONFIGS.forEach(config => {
+        const match = lastMessage.content.match(config.regex);
+        if (match) {
+          console.log(`Found ${config.type} in agent message:`, match[1]);
+          setCurrentValues(prev => ({
+            ...prev,
+            [config.key]: match[1]
+          }));
+        }
+      });
+    }
+  }, [messages]);
+
+  // Helper to create boxed values
+  const createBoxedValues = () => {
+    const boxes = [];
+    
+    // Always add venue address box if we have an address
+    if (address) {
+      boxes.push(`[VENUE_ADDRESS]${address}[/VENUE_ADDRESS]`);
     }
 
-    console.log('Sending message:', {
-      type: 'chat',
-      message: input
-    });
+    // Add other stored values
+    if (currentValues.rewardAmount) {
+      boxes.push(`[REWARD_AMOUNT]${currentValues.rewardAmount}[/REWARD_AMOUNT]`);
+    }
+    if (currentValues.rewardToken) {
+      boxes.push(`[REWARD_TOKEN]${currentValues.rewardToken}[/REWARD_TOKEN]`);
+    }
+    if (currentValues.agentAddress) {
+      boxes.push(`[AGENT_ADDRESS]${currentValues.agentAddress}[/AGENT_ADDRESS]`);
+    }
+    if (currentValues.campaignId) {
+      boxes.push(`[CAMPAIGN_ID]${currentValues.campaignId}[/CAMPAIGN_ID]`);
+    }
+    if (currentValues.signature) {
+      boxes.push(`[SIGNATURE]${currentValues.signature}[/SIGNATURE]`);
+    }
 
-    setMessages(prev => [...prev, userMessage]);
-    
+    return boxes;
+  };
+
+  // Modified sendMessage helper
+  const sendMessage = (message: string, userMessage?: Message) => {
     try {
-      ws.send(JSON.stringify({
+      // Prepend boxes to message
+      const boxes = createBoxedValues();
+      console.log('Current boxes:', boxes);
+      
+      const fullMessage = [...boxes, message].join('\n');
+      console.log('Sending full message:', fullMessage);
+
+      if (userMessage) {
+        setMessages(prev => [...prev, userMessage]);
+      }
+
+      ws?.send(JSON.stringify({
         type: 'chat',
-        message: input
+        message: fullMessage
       }));
-      setInput(''); // Clear input after sending
+      setInput('');
     } catch (error) {
       console.error('Error sending message:', error);
       setMessages(prev => [...prev, {
@@ -184,7 +311,24 @@ export function ChatWindow({ agentType }: ChatWindowProps) {
         timestamp: new Date().toLocaleTimeString()
       }]);
     }
-  }
+  };
+
+  const handleSend = () => {
+    if (!input.trim() || !ws || connecting) return;
+
+    // Create message with role prefix
+    const prefixedMessage = agentType === 'campaignManager' 
+      ? `venue:${address}: ${input}`
+      : `visitor:${address}: ${input}`;
+
+    const userMessage: Message = {
+      role: 'user',
+      content: input,
+      timestamp: new Date().toLocaleTimeString()
+    };
+
+    sendMessage(prefixedMessage, userMessage);
+  };
 
   const handleKeyPress = (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
     if (e.key === 'Enter' && !e.shiftKey) {
@@ -258,13 +402,16 @@ export function ChatWindow({ agentType }: ChatWindowProps) {
         params: [data.owner, typedData]
       });
 
-
       console.log('Got signature:', signature);
 
-      ws?.send(JSON.stringify({
-        type: 'chat',
-        message: `Signature completed: ${signature}`
+      // Store signature in currentValues
+      setCurrentValues(prev => ({
+        ...prev,
+        signature: signature
       }));
+
+      // Send signature confirmation with all boxes
+      sendMessage(`Signature completed: ${signature}`);
 
       setMessages(prev => [...prev, {
         role: 'system',

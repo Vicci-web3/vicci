@@ -47,6 +47,15 @@ interface AgentCallbacks {
     requestPermit: (permitData: any) => void;
 }
 
+interface CurrentValues {
+    rewardAmount: string | null;
+    venueAddress: string | null;
+    rewardToken: string | null;
+    agentAddress: string | null;
+    campaignId: string | null;
+    signature: string | null;
+}
+
 export default class CoinbaseAgent {
     private agent: any;
     private config: any;
@@ -61,6 +70,57 @@ export default class CoinbaseAgent {
     private permitSignatureResolve: ((signature: string) => void) | null = null;
     
     private static PERMIT_REQUEST_REGEX = /\[PERMIT_REQUEST\](.*?)\[\/PERMIT_REQUEST\]/s;
+    private static REWARD_AMOUNT_REGEX = /\[REWARD_AMOUNT\](.*?)\[\/REWARD_AMOUNT\]/;
+    private static VENUE_ADDRESS_REGEX = /\[VENUE_ADDRESS\](.*?)\[\/VENUE_ADDRESS\]/;
+    private static CAMPAIGN_ID_REGEX = /\[CAMPAIGN_ID\](.*?)\[\/CAMPAIGN_ID\]/;
+    private static SIGNATURE_REGEX = /\[SIGNATURE\](.*?)\[\/SIGNATURE\]/;
+
+    private static AMOUNT_VALIDATOR = /^\d+$/;
+    private static ADDRESS_VALIDATOR = /^0x[a-fA-F0-9]{40}$/;
+
+    private currentValues: CurrentValues | null = null;
+
+    private static readonly BOX_CONFIGS = [
+        {
+            type: 'reward',
+            regex: /\[REWARD_AMOUNT\](.*?)\[\/REWARD_AMOUNT\]/,
+            validator: /^\d+$/,
+            key: 'rewardAmount' as keyof CurrentValues
+        },
+        {
+            type: 'venue',
+            regex: /\[VENUE_ADDRESS\](.*?)\[\/VENUE_ADDRESS\]/,
+            validator: /^0x[a-fA-F0-9]{40}$/,
+            key: 'venueAddress' as keyof CurrentValues
+        },
+        {
+            type: 'rewardToken',
+            regex: /\[REWARD_TOKEN\](.*?)\[\/REWARD_TOKEN\]/,
+            validator: /^"0x[a-fA-F0-9]{40}"$/,
+            key: 'rewardToken' as keyof CurrentValues
+        },
+        {
+            type: 'agent',
+            regex: /\[AGENT_ADDRESS\](.*?)\[\/AGENT_ADDRESS\]/,
+            validator: /^"0x[a-fA-F0-9]{40}"$/,
+            key: 'agentAddress' as keyof CurrentValues
+        },
+        {
+            type: 'campaignId',
+            regex: /\[CAMPAIGN_ID\](.*?)\[\/CAMPAIGN_ID\]/,
+            validator: /^.+$/,
+            key: 'campaignId' as keyof CurrentValues
+        },
+        {
+            type: 'signature',
+            regex: /\[SIGNATURE\](.*?)\[\/SIGNATURE\]/,
+            validator: /^0x[a-fA-F0-9]+$/,
+            key: 'signature' as keyof CurrentValues
+        }
+    ];
+
+    private static REWARD_AMOUNT_INPUT_REGEX = /(?:reward|amount|pool)\s*(?:of|:)?\s*(\d+)/i;
+    private static VENUE_ADDRESS_INPUT_REGEX = /(?:venue|address|from):?\s*(0x[a-fA-F0-9]{40})/i;
 
     constructor(type: AgentType = 'counsellor', callbacks: AgentCallbacks) {
         console.log(`Creating new CoinbaseAgent of type: ${type}`);
@@ -123,27 +183,35 @@ export default class CoinbaseAgent {
                 messageModifier: `
                     You are a Campaign Manager agent that helps create reward campaigns on the Vicci platform.
                     
-                    When creating a campaign, you should:
-                    1. First collect all required information:
-                       - Campaign ID (you can use "test-id")
-                       - Initial reward pool amount (use "1000")
-                       - Venue address (use "0x788CED731764Cf1BdBF0DA8aCEdAcA7CaE4C9997")
-                       - Set deadline to one week from now in UNIX timestamp
-                    
-                    2. Request permit signature using this EXACT format:
+                    The campaign creation process follows two steps:
+
+                    1. Request permit signature:
                        [PERMIT_REQUEST]
                        Please sign the permit message to authorize token transfer.
                        [/PERMIT_REQUEST]
-                    
-                    3. After receiving the signature, IMMEDIATELY proceed with create-new-campaign using:
-                       - rewardToken: "0xd1e07d461df1371d7379e77d09a9d73f0d358f3f"
-                       - agent: "0x8f5c3EE4007ad86F38288b78A9ED7C54afBcA87f"
-                       - The campaign ID, venue address, and initial reward pool you collected
-                       - The signature you just received
-                       - The deadline you calculated
-                    
-                    DO NOT ask for information you already have. Once you receive the signature, proceed immediately with creating the campaign.
-                    If there are any errors, explain them clearly to the user and guide them on how to proceed.
+
+                       Required parameters:
+                       [REWARD_TOKEN]"0xd1e07d461df1371d7379e77d09a9d73f0d358f3f"[/REWARD_TOKEN]
+                       [AGENT_ADDRESS]"0x8f5c3EE4007ad86F38288b78A9ED7C54afBcA87f"[/AGENT_ADDRESS]
+                       [REWARD_AMOUNT]<number>[/REWARD_AMOUNT]
+                       [VENUE_ADDRESS]<0x address>[/VENUE_ADDRESS]
+                       [CAMPAIGN_ID]<string>[/CAMPAIGN_ID]
+                       [SIGNATURE]<string>[/SIGNATURE]
+
+                    Factory contract: "0xbb7e1ceeb5c62f11ae93341bfbe5d94d407c4e71"
+                    Reward token: "0xd1e07d461df1371d7379e77d09a9d73f0d358f3f"
+                    Agent address: "0x8f5c3EE4007ad86F38288b78A9ED7C54afBcA87f"
+
+                    IMPORTANT: Always collect and validate required information in EXACT box format:
+                    [REWARD_TOKEN]"0xd1e07d461df1371d7379e77d09a9d73f0d358f3f"[/REWARD_TOKEN]
+                    [AGENT_ADDRESS]"0x8f5c3EE4007ad86F38288b78A9ED7C54afBcA87f"[/AGENT_ADDRESS]
+                    [REWARD_AMOUNT]<number>[/REWARD_AMOUNT]
+                    [VENUE_ADDRESS]<0x address>[/VENUE_ADDRESS]
+                    [CAMPAIGN_ID]<string>[/CAMPAIGN_ID]
+                    [SIGNATURE]<string>[/SIGNATURE]
+
+                    If ANY required information is missing, ask for it explicitly using these EXACT box formats.
+                    Do not proceed with permit request until ALL required information is provided.
                 `,
                 actionProviders: [...baseProviders],
             },
@@ -357,46 +425,279 @@ export default class CoinbaseAgent {
     }
 
     async handlePermitSignature(signature: string) {
-        if (this.permitSignatureResolve) {
-            this.permitSignatureResolve(signature);
-            this.permitSignatureResolve = null;
-            this.permitSignaturePromise = null;
+        try {
+            console.log('\n=== Handling Permit Signature ===');
+            console.log('Current stored values:', this.currentValues);
+            
+            if (this.permitSignatureResolve) {
+                // Store the signature with the current values
+                if (this.currentValues?.rewardAmount && this.currentValues?.venueAddress) {
+                    console.log('✓ Using stored values for campaign creation:', {
+                        rewardAmount: this.currentValues.rewardAmount,
+                        venueAddress: this.currentValues.venueAddress
+                    });
+                    
+                    // Create campaign with stored values
+                    this.callbacks.sendMessage(
+                        `Great! Creating campaign with stored values:\n` +
+                        `[REWARD_AMOUNT]${this.currentValues.rewardAmount}[/REWARD_AMOUNT]\n` +
+                        `[VENUE_ADDRESS]${this.currentValues.venueAddress}[/VENUE_ADDRESS]\n\n` +
+                        `Using the provided signature to create the campaign...`
+                    );
+                    
+                    this.permitSignatureResolve(signature);
+                } else {
+                    console.log('⚠️ Missing stored values when handling signature');
+                    this.callbacks.sendMessage(
+                        "Error: Required values were lost. Please start the campaign creation process again."
+                    );
+                }
+                
+                this.permitSignatureResolve = null;
+                this.permitSignaturePromise = null;
+            }
+        } catch (error) {
+            console.error('Error handling permit signature:', error);
+            this.callbacks.sendMessage(
+                "Error handling signature. Please try the campaign creation process again."
+            );
+        }
+    }
+
+    private initializeCurrentValues() {
+        if (this.currentValues === null) {
+            console.log('Initializing new current values storage');
+            this.currentValues = {
+                rewardAmount: null,
+                venueAddress: null,
+                rewardToken: null,
+                agentAddress: null,
+                campaignId: null,
+                signature: null
+            };
+        } else {
+            console.log('Using existing stored values:', this.currentValues);
+        }
+    }
+
+    private checkInputMessage(message: string) {
+        try {
+            console.log('\n=== Checking Input Message ===');
+            console.log('Raw message:', message);
+
+            const results = CoinbaseAgent.BOX_CONFIGS.map(config => {
+                const match = message.match(config.regex);
+                const matchDetails = {
+                    type: config.type,
+                    found: !!match,
+                    fullMatch: match?.[0],
+                    capturedValue: match?.[1],
+                    isValid: match ? config.validator.test(match[1]) : false
+                };
+
+                if (!matchDetails.found) {
+                    console.log(`⚠️ No ${config.type} found in message`);
+                } else if (!matchDetails.isValid) {
+                    console.log(`⚠️ Found ${config.type} but failed validation:`, matchDetails.capturedValue);
+                } else {
+                    console.log(`✓ Valid ${config.type} found:`, matchDetails.capturedValue);
+                }
+
+                return {
+                    config,
+                    match,
+                    details: matchDetails
+                };
+            });
+
+            console.log('Match results:', results);
+
+            return {
+                matches: results,
+                matchDetails: Object.fromEntries(
+                    results.map(r => [r.config.type, r.details])
+                )
+            };
+        } catch (error) {
+            console.error('Error checking input message:', error);
+            return {
+                matches: [],
+                matchDetails: {}
+            };
+        }
+    }
+
+    private updateStoredValues(results: { config: typeof CoinbaseAgent.BOX_CONFIGS[0], match: RegExpMatchArray | null }[]) {
+        try {
+            results.forEach(({ config, match }) => {
+                if (match && config.validator.test(match[1])) {
+                    console.log(`✓ Storing valid ${config.type}:`, match[1]);
+                    if (this.currentValues) {
+                        this.currentValues[config.key] = match[1];
+                    }
+                }
+            });
+        } catch (error) {
+            console.error('Error updating stored values:', error);
+        }
+    }
+
+    private async handlePermitRequest(response: string) {
+        try {
+            const permitMatch = response.match(CoinbaseAgent.PERMIT_REQUEST_REGEX);
+            console.log('Permit Request Match:', {
+                found: !!permitMatch,
+                match: permitMatch,
+                currentValues: this.currentValues // Log current values for debugging
+            });
+
+            if (!permitMatch) return false;
+
+            console.log('\n=== Found Permit Request ===');
+            console.log('Using stored values:', this.currentValues);
+
+            // If we have both values stored, proceed with permit request
+            if (this.currentValues?.rewardAmount && this.currentValues?.venueAddress) {
+                console.log('✓ Using previously stored values for permit request');
+                await this.requestPermitSignatureWithValues(permitMatch[1].trim());
+                return true;
+            }
+
+            // Only ask for missing values if we don't have them
+            const missingParams = [];
+            if (!this.currentValues?.rewardAmount) {
+                missingParams.push("[REWARD_AMOUNT]<number>[/REWARD_AMOUNT]");
+            }
+            if (!this.currentValues?.venueAddress) {
+                missingParams.push("[VENUE_ADDRESS]<0x address>[/VENUE_ADDRESS]");
+            }
+
+            if (missingParams.length > 0) {
+                this.callbacks.sendMessage(
+                    "I still need the following information:\n" + 
+                    missingParams.join('\n') +
+                    "\n\nPlease provide the missing information in exactly this format."
+                );
+                return true;
+            }
+
+            return false;
+        } catch (error) {
+            console.error('Error handling permit request:', error);
+            return false;
+        }
+    }
+
+    private async requestPermitSignatureWithValues(permitMessage: string) {
+        try {
+            const mockERC20Address = "0xd1e07d461df1371d7379e77d09a9d73f0d358f3f";
+            const nonce = await this.walletProvider.readContract({
+                address: mockERC20Address as `0x${string}`,
+                abi: MockERC20ABI.abi,
+                functionName: 'nonces',
+                args: [this.currentValues!.venueAddress as `0x${string}`]
+            });
+
+            const deadline = 2703166645;
+            
+            const permitData = {
+                owner: this.currentValues!.venueAddress,
+                spender: "0xbb7e1ceeb5c62f11ae93341bfbe5d94d407c4e71",
+                value: this.currentValues!.rewardAmount,
+                nonce: Number(nonce),
+                deadline
+            };
+
+            this.callbacks.requestPermit(permitData);
+            this.callbacks.sendMessage(
+                `Using stored values:\n` +
+                `[REWARD_AMOUNT]${this.currentValues!.rewardAmount}[/REWARD_AMOUNT]\n` +
+                `[VENUE_ADDRESS]${this.currentValues!.venueAddress}[/VENUE_ADDRESS]\n\n` +
+                permitMessage
+            );
+        } catch (error) {
+            console.error('Error requesting permit signature:', error);
+            throw error;
+        }
+    }
+
+    private preprocessMessage(message: string) {
+        try {
+            console.log('\n=== Preprocessing User Message ===');
+            console.log('Raw message:', message);
+
+            // Extract values from raw input
+            const rewardMatch = message.match(CoinbaseAgent.REWARD_AMOUNT_INPUT_REGEX);
+            const venueMatch = message.match(CoinbaseAgent.VENUE_ADDRESS_INPUT_REGEX);
+
+            console.log('Preprocessing matches:', {
+                reward: {
+                    found: !!rewardMatch,
+                    value: rewardMatch?.[1]
+                },
+                venue: {
+                    found: !!venueMatch,
+                    value: venueMatch?.[1]
+                }
+            });
+
+            // Validate and store values if found
+            if (rewardMatch && CoinbaseAgent.AMOUNT_VALIDATOR.test(rewardMatch[1])) {
+                console.log('✓ Found valid reward amount in input:', rewardMatch[1]);
+                this.currentValues!.rewardAmount = rewardMatch[1];
+            }
+            if (venueMatch && CoinbaseAgent.ADDRESS_VALIDATOR.test(venueMatch[1])) {
+                console.log('✓ Found valid venue address in input:', venueMatch[1]);
+                this.currentValues!.venueAddress = venueMatch[1];
+            }
+
+            return message;
+        } catch (error) {
+            console.error('Error preprocessing message:', error);
+            return message;
         }
     }
 
     async handleMessage(message: string) {
         try {
+            console.log('\n=== Starting Message Processing ===');
+            
+            if (!this.currentValues) {
+                this.initializeCurrentValues();
+            }
+
+            // Check for boxed values in message
+            const { matches } = this.checkInputMessage(message);
+            this.updateStoredValues(matches);
+            
+            console.log('Current values after processing:', this.currentValues);
+
+            // Process agent responses
             const responses = await this.processUserInput(message);
             
             for (const response of responses) {
-                const permitMatch = response.match(this.PERMIT_REQUEST_REGEX);
-                if (permitMatch) {
-                    // Calculate deadline as 1 hour from now
-                    const deadline = Math.floor(Date.now() / 1000) + 3600;
+                try {
+                    console.log('\n=== Checking Agent Response ===');
+                    console.log('Response Content:', response);
                     
-                    // Request the permit signature with real data
-                    const permitData = {
-                        owner: "0x788CED731764Cf1BdBF0DA8aCEdAcA7CaE4C9997", // venue address
-                        spender: "0xbb7e1ceeb5c62f11ae93341bfbe5d94d407c4e71", // factory address
-                        value: "1000000000000000000000", // 1000 tokens with 18 decimals
-                        nonce: 0, // This should come from the contract
-                        deadline
-                    };
+                    // Check for boxed values in response
+                    const { matches: responseMatches } = this.checkInputMessage(response);
+                    this.updateStoredValues(responseMatches);
+                    
+                    console.log('Current values after response:', this.currentValues);
 
-                    // Send permit request to frontend
-                    this.callbacks.requestPermit(permitData);
-
-                    // Send the message without the tags
-                    const cleanMessage = response.replace(this.PERMIT_REQUEST_REGEX, permitMatch[1].trim());
-                    this.callbacks.sendMessage(cleanMessage);
-                } else {
-                    // Regular message, send as is
-                    this.callbacks.sendMessage(response);
+                    const handledPermit = await this.handlePermitRequest(response);
+                    if (!handledPermit) {
+                        this.callbacks.sendMessage(response);
+                    }
+                } catch (error) {
+                    console.error('Error processing response:', error);
+                    continue;
                 }
             }
         } catch (error) {
-            console.error('Error handling message:', error);
-            this.callbacks.sendMessage("Sorry, there was an error processing your request.");
+            console.error('Error in handleMessage:', error);
+            this.callbacks.sendMessage("Sorry, there was an error processing your request. Please try again.");
         }
     }
 }

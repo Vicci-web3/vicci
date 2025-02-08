@@ -1,7 +1,7 @@
 import { z } from "zod";
 import { ActionProvider, Network, CreateAction } from "@coinbase/agentkit";
 import { ViemWalletProvider } from "@coinbase/agentkit";
-import { encodeFunctionData } from "viem";
+import { encodeFunctionData, parseEventLogs } from "viem";
 import VicciFactoryABI from '../abi/VicciRewardERC20Factory.json';
 import MockERC20ABI from '../abi/MockERC20.json';
 
@@ -36,22 +36,27 @@ class VicciCampaignProvider extends ActionProvider<ViemWalletProvider> {
     description: `
     This tool handles the workflow to handling creating a new campaign
     It follows two steps:
-    1. requesting an EIP-2612 permit signature from the venue that authorizes you the agent to take the reward token and paste it into the factory created reward contract
-    - please make these parameters clear to the user on replay with a format like this:
-    - campaignId: 1
-    - initialRewardPool: 1000
-    - venue: 0x1234567890123456789012345678901234567890
-    - agent: 0x8f5c3EE4007ad86F38288b78A9ED7C54afBcA87f
-    - deadline: 1717987200
 
-    2. consuming that signature to call the deployRewardContract function on the factory contract
-    - the factory contract is:  "0xbb7e1ceeb5c62f11ae93341bfbe5d94d407c4e71"
-    - the reward token is:  "0xd1e07d461df1371d7379e77d09a9d73f0d358f3f"
-    - the venue is the signer of the permit
-    - you are the agent: (with public key: 0x8f5c3EE4007ad86F38288b78A9ED7C54afBcA87f)
+    1. Request permit signature:
+       [PERMIT_REQUEST]
+       Please sign the permit message to authorize token transfer.
+       [/PERMIT_REQUEST]
 
-    - we will need to ask the venue for the campaignId, initialRewardPool
-    - we than can call the createCampaign function that is attached to this tool
+       Required parameters:
+       [REWARD_AMOUNT]<number>[/REWARD_AMOUNT]
+       [VENUE_ADDRESS]<0x address>[/VENUE_ADDRESS]
+
+    2. Create campaign with:
+       - rewardToken: "0xd1e07d461df1371d7379e77d09a9d73f0d358f3f"
+       - agent: "0x8f5c3EE4007ad86F38288b78A9ED7C54afBcA87f"
+       - campaignId: <user-provided>
+       - venue: [VENUE_ADDRESS]from step 1[/VENUE_ADDRESS]
+       - initialRewardPool: [REWARD_AMOUNT]from step 1[/REWARD_AMOUNT]
+       - signature: <from step 1>
+
+    Factory contract: "0xbb7e1ceeb5c62f11ae93341bfbe5d94d407c4e71"
+    Reward token: "0xd1e07d461df1371d7379e77d09a9d73f0d358f3f"
+    Agent address: "0x8f5c3EE4007ad86F38288b78A9ED7C54afBcA87f"
     `,
     schema: CreateCampaignSchema,
   })
@@ -86,7 +91,7 @@ class VicciCampaignProvider extends ActionProvider<ViemWalletProvider> {
           args.campaignId,
           args.agent as `0x${string}`,
           args.venue as `0x${string}`,
-          amount, // Use BigInt amount directly instead of parseEther
+          amount,
           BigInt("2703166645"),
           v,
           r as `0x${string}`,
@@ -103,20 +108,19 @@ class VicciCampaignProvider extends ActionProvider<ViemWalletProvider> {
       console.log('Transaction hash:', hash);
       const receipt = await this.walletProvider.waitForTransactionReceipt(hash);
       console.log('Transaction receipt:', receipt);
-      // Find the RewardContractDeployed event
-      const deployEvent = receipt.logs.find(log => 
-        log.topics[0] === encodeFunctionData({
-          abi: VicciFactoryABI.abi,
-          functionName: 'RewardContractDeployed',
-          args: []
-        })
-      );
 
-      if (!deployEvent) {
+      // Parse event logs
+      const logs = parseEventLogs({
+        abi: VicciFactoryABI.abi,
+        eventName: 'RewardContractDeployed',
+        logs: receipt.logs
+      });
+
+      if (!logs || logs.length === 0) {
         throw new Error("Failed to find deployment event");
       }
 
-      const rewardContractAddress = deployEvent.topics[1] as `0x${string}`;
+      const rewardContractAddress = logs[0].args.rewardContract as `0x${string}`;
       return `Successfully deployed reward contract at ${rewardContractAddress}`;
     } catch (error) {
       console.error('Campaign creation failed:', error);
@@ -141,6 +145,7 @@ class VicciCampaignProvider extends ActionProvider<ViemWalletProvider> {
     return this.mockTokenAddress;
   }
 }
+
 
 // Export a singleton instance since we don't need factory address parameter anymore
 export const vicciCampaignProvider = (walletProvider: ViemWalletProvider) => {
