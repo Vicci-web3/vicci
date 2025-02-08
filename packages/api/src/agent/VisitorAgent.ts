@@ -373,8 +373,9 @@ export default class VisitorAgent {
             await this.messageBus.publish(Topics.CHAT_MESSAGE, chatMessage);
             console.log('✓ Successfully published to chat.message topic');
 
-            // Request RAG-enhanced context if we have a visitor ID
-            let ragResponse: RAGResponse | null = null;
+            let enhancedInput = input;
+            
+            // Only request RAG-enhanced context if we have a visitor ID
             if (this.visitorId) {
                 try {
                     // Request RAG response
@@ -395,37 +396,36 @@ export default class VisitorAgent {
                     });
 
                     // Wait for response with 5 second timeout
-                    ragResponse = await Promise.race([
+                    const ragResponse = await Promise.race([
                         responsePromise,
                         new Promise<null>((resolve) => setTimeout(() => resolve(null), 5000))
                     ]);
+
+                    if (ragResponse) {
+                        enhancedInput = `
+                            Original user query: ${input}
+
+                            Relevant historical context:
+                            ${ragResponse.relevantDocs.map(doc => `
+                                ${doc.content}
+                                (From ${doc.metadata.role} at ${doc.metadata.timestamp})
+                            `).join('\n')}
+
+                            Previous AI suggestion:
+                            ${ragResponse.response}
+                            (Confidence: ${ragResponse.confidence})
+
+                            Please provide a response that:
+                            1. Addresses the user's query
+                            2. Takes into account the historical context
+                            3. Maintains consistency with previous responses
+                            4. Is helpful and actionable
+                        `;
+                    }
                 } catch (error) {
                     console.error('Error getting RAG response:', error);
+                    // Continue with original input if RAG fails
                 }
-            }
-
-            // Enhance the user input with RAG context if available
-            let enhancedInput = input;
-            if (ragResponse) {
-                enhancedInput = `
-                    Original user query: ${input}
-
-                    Relevant historical context:
-                    ${ragResponse.relevantDocs.map(doc => `
-                        ${doc.content}
-                        (From ${doc.metadata.role} at ${doc.metadata.timestamp})
-                    `).join('\n')}
-
-                    Previous AI suggestion:
-                    ${ragResponse.response}
-                    (Confidence: ${ragResponse.confidence})
-
-                    Please provide a response that:
-                    1. Addresses the user's query
-                    2. Takes into account the historical context
-                    3. Maintains consistency with previous responses
-                    4. Is helpful and actionable
-                `;
             }
 
             const timeoutPromise = new Promise((_, reject) => {
