@@ -1,5 +1,6 @@
 'use client'
 import MockERC20ABI from '@/lib/MockERC20.json'
+import VicciRewardFactory from '@/lib/VicciRewardERC20Factory.json'
 import { useState, useEffect, useRef } from "react"
 import { Button } from "@/components/ui/button"
 import { Textarea } from "@/components/ui/textarea"
@@ -14,10 +15,10 @@ interface Message {
   action?: {
     type: "permit_sign"
     data: {
-      owner: string
-      spender: string
+      owner: `0x${string}`
+      spender: `0x${string}`
       value: string
-      nonce: number
+      nonce: bigint
       deadline: number
     }
   }
@@ -25,6 +26,7 @@ interface Message {
 
 interface ChatWindowProps {
   agentType: 'counsellor' | 'campaignManager'
+  onClose?: () => void
 }
 
 const getWelcomeMessage = (agentType: string): string => {
@@ -34,7 +36,7 @@ const getWelcomeMessage = (agentType: string): string => {
   return "Welcome! I'm your Campaign Manager assistant. I can help you create and manage token-gating campaigns, set up rewards, and handle venue credentials. What would you like to do?"
 }
 
-export function VenueChatWindow({ agentType }: ChatWindowProps) {
+export function VenueChatWindow({ agentType, onClose }: ChatWindowProps) {
   const { address } = useAccount()
   const publicClient = usePublicClient()
   const { data: walletClient } = useWalletClient()
@@ -151,16 +153,16 @@ export function VenueChatWindow({ agentType }: ChatWindowProps) {
             
             const permitData = {
               owner: address as `0x${string}`,
-              spender: "0xbb7e1ceeb5c62f11ae93341bfbe5d94d407c4e71",
-              value: rewardAmount, // Use the extracted reward amount
+              spender: VicciRewardFactory.addresses['84532'] as `0x${string}`,
+              value: rewardAmount,
               nonce: await publicClient.readContract({
                 address: MockERC20.addresses['84532'] as `0x${string}`,
                 abi: MockERC20ABI.abi,
                 functionName: 'nonces',
                 args: [address as `0x${string}`]
-              }),
+              }) as bigint,
               deadline
-            };
+            } satisfies NonNullable<Message['action']>['data'];
 
             console.log('Setting permit action with data:', permitData);
 
@@ -172,7 +174,7 @@ export function VenueChatWindow({ agentType }: ChatWindowProps) {
                 type: 'permit_sign',
                 data: permitData
               }
-            }]);
+            } satisfies Message]);
           }
           
           setMessages(prev => [...prev, {
@@ -192,7 +194,7 @@ export function VenueChatWindow({ agentType }: ChatWindowProps) {
               type: 'permit_sign',
               data: response.data
             }
-          }])
+          } satisfies Message])
           // Trigger permit signing
           handlePermitSign(response.data)
         }
@@ -336,10 +338,11 @@ export function VenueChatWindow({ agentType }: ChatWindowProps) {
     }
   }
 
-  const handlePermitSign = async (data: Message['action']['data']) => {
+  const handlePermitSign = async (data: NonNullable<Message['action']>['data']) => {
     console.log('=== Starting Permit Sign Process ===');
     try {
       const mockERC20Address = MockERC20.addresses['84532']
+      console.log('MockERC20 address:', mockERC20Address);
       
       // Get current nonce using readContract
       console.log('Fetching nonce for address:', data.owner);
@@ -347,8 +350,8 @@ export function VenueChatWindow({ agentType }: ChatWindowProps) {
         address: mockERC20Address as `0x${string}`,
         abi: MockERC20.abi,
         functionName: 'nonces',
-        args: [data.owner]
-      })
+        args: [data.owner as `0x${string}`]
+      }) as bigint;
       console.log('Current nonce:', nonce);
 
       if (!walletClient) throw new Error('Wallet not connected');
@@ -358,8 +361,14 @@ export function VenueChatWindow({ agentType }: ChatWindowProps) {
         address: mockERC20Address as `0x${string}`,
         abi: MockERC20.abi,
         functionName: 'DOMAIN_SEPARATOR',
-      })
+      }) as `0x${string}`;
       console.log('Domain Separator:', domainSeparator);
+
+      // For now, use hardcoded values since the contract might not implement name/version
+      const name = 'MockERC20';
+      const version = '1';
+      console.log('Using token name:', name);
+      console.log('Using token version:', version);
       
       const typedData = {
         types: {
@@ -391,7 +400,7 @@ export function VenueChatWindow({ agentType }: ChatWindowProps) {
           nonce: nonce.toString(),
           deadline: data.deadline.toString()
         }
-      };
+      } as const;
 
       console.log('Signing data:', JSON.stringify(typedData, null, 2));
       
@@ -401,12 +410,21 @@ export function VenueChatWindow({ agentType }: ChatWindowProps) {
         params: [data.owner, typedData]
       });
 
+      if (typeof signature !== 'string') {
+        throw new Error('Invalid signature returned');
+      }
+
       console.log('Got signature:', signature);
+      console.log('Signature components:', {
+        r: '0x' + signature.slice(2, 66),
+        s: '0x' + signature.slice(66, 130),
+        v: parseInt(signature.slice(130, 132), 16)
+      });
 
       // Store signature in currentValues
       setCurrentValues(prev => ({
         ...prev,
-        signature: signature
+        signature: signature as string
       }));
 
       // Send signature confirmation with all boxes
@@ -487,6 +505,11 @@ export function VenueChatWindow({ agentType }: ChatWindowProps) {
     )
   }
 
+  const handleClose = () => {
+    setIsOpen(false)
+    onClose?.()
+  }
+
   return (
     <div className="fixed inset-0 flex items-center justify-center">
       <div className="w-3/4 h-2/3 bg-card text-card-foreground border bg-black shadow-lg rounded-lg flex flex-col">
@@ -498,7 +521,7 @@ export function VenueChatWindow({ agentType }: ChatWindowProps) {
           <Button 
             variant="ghost" 
             size="sm" 
-            onClick={() => setIsOpen(false)}
+            onClick={handleClose}
             className="text-muted-foreground hover:text-foreground"
           >
             <X className="h-4 w-4" />

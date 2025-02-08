@@ -7,6 +7,7 @@ import { MessageSquare, X, Loader2 } from 'lucide-react'
 import { cn } from "@/lib/utils"
 import { useAccount, usePublicClient, useWalletClient } from 'wagmi'
 import MockERC20 from '@/lib/MockERC20.json'
+
 interface Message {
   role: "agent" | "user" | "system" | "action"
   content: string
@@ -23,12 +24,15 @@ interface Message {
   }
 }
 
+interface VisitorChatWindowProps {
+  onClose?: () => void
+}
 
 const getWelcomeMessage = (): string => {
   return "Hello! I'm your Visitor Information Counsellor. I can help you check venue access eligibility, verify credentials, and answer questions about venue requirements. How can I assist you today?"
 }
 
-export function VisitorChatWindow() {
+export function VisitorChatWindow({ onClose }: VisitorChatWindowProps) {
   const { address } = useAccount()
   const publicClient = usePublicClient()
   const { data: walletClient } = useWalletClient()
@@ -489,7 +493,10 @@ export function VisitorChatWindow() {
           <Button 
             variant="ghost" 
             size="sm" 
-            onClick={() => setIsOpen(false)}
+            onClick={() => {
+              setIsOpen(false)
+              onClose?.()
+            }}
             className="text-muted-foreground hover:text-foreground"
           >
             <X className="h-4 w-4" />

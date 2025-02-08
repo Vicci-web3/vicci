@@ -45,6 +45,9 @@ CREATE TABLE "Permit" (
     "id" TEXT NOT NULL,
     "campaignId" TEXT NOT NULL,
     "visitorId" TEXT NOT NULL,
+    "amount" BIGINT NOT NULL,
+    "deadline" BIGINT NOT NULL,
+    "nonce" BIGINT NOT NULL,
     "claimed" BOOLEAN NOT NULL DEFAULT false,
     "claimedAt" TIMESTAMP(3),
     "signature" TEXT NOT NULL,
@@ -58,6 +61,9 @@ CREATE UNIQUE INDEX "Visitor_address_key" ON "Visitor"("address");
 
 -- CreateIndex
 CREATE UNIQUE INDEX "Venue_address_key" ON "Venue"("address");
+
+-- CreateIndex
+CREATE UNIQUE INDEX "Campaign_objective_key" ON "Campaign"("objective");
 
 -- AddForeignKey
 ALTER TABLE "Campaign" ADD CONSTRAINT "Campaign_venueId_fkey" FOREIGN KEY ("venueId") REFERENCES "Venue"("id") ON DELETE RESTRICT ON UPDATE CASCADE;

@@ -24,24 +24,25 @@ export default function VenueDashboard() {
   const [campaigns, setCampaigns] = useState<Campaign[]>([])
   const [loadingCampaigns, setLoadingCampaigns] = useState(true)
 
-  useEffect(() => {
-    const fetchCampaigns = async () => {
-      if (!address) return
-      
-      try {
-        const response = await fetch(`/api/venue/campaigns?address=${address}`);
-        if (!response.ok) {
-          throw new Error('Failed to fetch campaigns');
-        }
-        const data = await response.json();
-        setCampaigns(data);
-      } catch (error) {
-        console.error('Error fetching campaigns:', error)
-      } finally {
-        setLoadingCampaigns(false)
+  const fetchCampaigns = async () => {
+    if (!address) return
+    
+    try {
+      setLoadingCampaigns(true)
+      const response = await fetch(`/api/venue/campaigns?address=${address}`);
+      if (!response.ok) {
+        throw new Error('Failed to fetch campaigns');
       }
+      const data = await response.json();
+      setCampaigns(data);
+    } catch (error) {
+      console.error('Error fetching campaigns:', error)
+    } finally {
+      setLoadingCampaigns(false)
     }
+  }
 
+  useEffect(() => {
     fetchCampaigns()
   }, [address])
 
@@ -113,7 +114,7 @@ export default function VenueDashboard() {
             )}
           </div>
 
-          <VenueChatWindow agentType="campaignManager" />
+          <VenueChatWindow agentType="campaignManager" onClose={fetchCampaigns} />
         </div>
       </main>
     </>

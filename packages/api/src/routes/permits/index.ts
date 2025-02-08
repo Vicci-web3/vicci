@@ -86,6 +86,39 @@ const permits: FastifyPluginAsync = async (fastify): Promise<void> => {
       });
     }
   });
+
+  // Add new PATCH endpoint
+  fastify.patch('/:id', async (request: FastifyRequest<{
+    Params: { id: string },
+    Body: { claimedAt: string }
+  }>, reply) => {
+    const { id } = request.params;
+    const { claimedAt } = request.body as { claimedAt: string };
+
+    console.log('🔄 Updating permit:', id, 'with claimedAt:', claimedAt);
+
+    try {
+      const updatedPermit = await fastify.prisma.permit.update({
+        where: { id },
+        data: {
+          claimed: true,
+          claimedAt: new Date(claimedAt)
+        },
+        include: {
+          campaign: true
+        }
+      });
+
+      console.log('✅ Permit updated successfully:', updatedPermit);
+      return reply.send(serializeBigInt(updatedPermit));
+    } catch (error) {
+      console.error('❌ Error updating permit:', error);
+      return reply.status(500).send({
+        error: 'Failed to update permit',
+        details: error instanceof Error ? error.message : 'Unknown error'
+      });
+    }
+  });
 };
 
 export default permits;

@@ -1,11 +1,12 @@
 'use client'
 
-import { useAccount } from 'wagmi'
+import { useAccount, useContractRead, useContractWrite } from 'wagmi'
 import { useRouter } from 'next/navigation'
 import { useEffect, useState } from 'react'
 import { useAuth } from '@/hooks/useAuth'
 import { ConnectButton } from '@/components/connect-button'
 import Link from 'next/link'
+import MockERC20 from '@/lib/MockERC20.json'
 
 type UserRoles = {
   venue?: boolean
@@ -17,6 +18,22 @@ export function Header() {
   const router = useRouter()
   const { isAuthenticated, setIsAuthenticated } = useAuth()
   const [userRoles, setUserRoles] = useState<UserRoles>({})
+
+  // Read balance
+  const { data: balance } = useContractRead({
+    address: MockERC20.addresses['84532'],
+    abi: MockERC20.abi,
+    functionName: 'balanceOf',
+    args: [address as `0x${string}`],
+    enabled: !!address,
+  })
+
+  // Faucet write
+  const { writeAsync: requestFaucet } = useContractWrite({
+    address: MockERC20.addresses['84532'],
+    abi: MockERC20.abi,
+    functionName: 'faucet',
+  })
 
   useEffect(() => {
     const checkUserRoles = async () => {
@@ -72,6 +89,17 @@ export function Header() {
     }
   }
 
+  const handleFaucet = async () => {
+    if (!address) return
+    try {
+      await requestFaucet({
+        args: [address, BigInt(1618)]
+      })
+    } catch (error) {
+      console.error('Faucet error:', error)
+    }
+  }
+
   return (
     <header className="border-b border-white/10 bg-gray-900/80 backdrop-blur-sm">
       <div className="container mx-auto px-4 py-4 flex justify-between items-center">
@@ -104,6 +132,17 @@ export function Header() {
           )}
         </div>
         <div className="flex items-center space-x-4">
+          {address && (
+            <div className="flex items-center space-x-2 px-3 py-1 bg-white/5 rounded-md">
+              <span className="text-sm text-white/70">Balance: {balance?.toString() || '0'}</span>
+              <button
+                onClick={handleFaucet}
+                className="text-xs px-2 py-1 bg-blue-500/20 hover:bg-blue-500/30 text-blue-300 rounded"
+              >
+                Get Tokens
+              </button>
+            </div>
+          )}
           <ConnectButton />
           {isAuthenticated ? (
             <button

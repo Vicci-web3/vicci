@@ -165,19 +165,19 @@ export default class VenueAgent {
                        [/PERMIT_REQUEST]
 
                        Required parameters:
-                       [REWARD_TOKEN]"0xd1e07d461df1371d7379e77d09a9d73f0d358f3f"[/REWARD_TOKEN]
+                       [REWARD_TOKEN]"0x44a1e87d54c84ce63d5c09cf8de3200a5e85d7c4"[/REWARD_TOKEN]
                        [AGENT_ADDRESS]"0x8f5c3EE4007ad86F38288b78A9ED7C54afBcA87f"[/AGENT_ADDRESS]
                        [REWARD_AMOUNT]<number>[/REWARD_AMOUNT]
                        [VENUE_ADDRESS]<0x address>[/VENUE_ADDRESS]
                        [CAMPAIGN_ID]<string>[/CAMPAIGN_ID]
                        [SIGNATURE]<string>[/SIGNATURE]
 
-                    Factory contract: "0xbb7e1ceeb5c62f11ae93341bfbe5d94d407c4e71"
-                    Reward token: "0xd1e07d461df1371d7379e77d09a9d73f0d358f3f"
+                    Factory contract: "0xaefc7ae8b3457515564943992fe08b7bd144e239"
+                    Reward token: "0x44a1e87d54c84ce63d5c09cf8de3200a5e85d7c4"
                     Agent address: "0x8f5c3EE4007ad86F38288b78A9ED7C54afBcA87f"
 
                     IMPORTANT: Always collect and validate required information in EXACT box format:
-                    [REWARD_TOKEN]"0xd1e07d461df1371d7379e77d09a9d73f0d358f3f"[/REWARD_TOKEN]
+                    [REWARD_TOKEN]"0x44a1e87d54c84ce63d5c09cf8de3200a5e85d7c4"[/REWARD_TOKEN]
                     [AGENT_ADDRESS]"0x8f5c3EE4007ad86F38288b78A9ED7C54afBcA87f"[/AGENT_ADDRESS]
                     [REWARD_AMOUNT]<number>[/REWARD_AMOUNT]
                     [VENUE_ADDRESS]<0x address>[/VENUE_ADDRESS]

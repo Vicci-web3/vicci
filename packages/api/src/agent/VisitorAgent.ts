@@ -255,6 +255,8 @@ export default class VisitorAgent {
                 Required parameters:
                 [AGENT_ADDRESS]"0x8f5c3EE4007ad86F38288b78A9ED7C54afBcA87f"[/AGENT_ADDRESS]
                 [VISITOR_ADDRESS]<0x address>[/VISITOR_ADDRESS]
+                [REWARD_AMOUNT]<number between 100-1000>[/REWARD_AMOUNT]
+                Depending on how much information they offer you can offer them a reward between 100-1000
                 1. Before Attempting to Offer a Reward Claim you must first gather some information from the visitor.
                 2. once you have gathered some information about what sort of experiences they want to explore in blockchain you can run the create-coupon tool
                 Here is an array of options to choose from: ${campainIdOptions}

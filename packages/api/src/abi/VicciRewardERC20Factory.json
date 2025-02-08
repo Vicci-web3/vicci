@@ -1,6 +1,6 @@
 {
   "addresses": {
-    "84532": "0xbb7e1ceeb5c62f11ae93341bfbe5d94d407c4e71"
+    "84532": "0xaefc7ae8b3457515564943992fe08b7bd144e239"
   },
   "abi": [
     {
@@ -21,6 +21,12 @@
           "indexed": true,
           "internalType": "address",
           "name": "rewardToken",
+          "type": "address"
+        },
+        {
+          "indexed": true,
+          "internalType": "address",
+          "name": "venue",
           "type": "address"
         },
         {
