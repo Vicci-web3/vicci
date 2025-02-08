@@ -4,6 +4,7 @@ import { ViemWalletProvider } from "@coinbase/agentkit";
 import { encodeFunctionData, parseEventLogs } from "viem";
 import VicciFactoryABI from '../abi/VicciRewardERC20Factory.json';
 import MockERC20ABI from '../abi/MockERC20.json';
+import { PrismaClient } from '@prisma/client';
 
 console.log('Loading create-campaign.ts');
 
@@ -22,6 +23,7 @@ class VicciCampaignProvider extends ActionProvider<ViemWalletProvider> {
   private factoryAddress: string;
   private mockTokenAddress: string;
   protected walletProvider: ViemWalletProvider;
+  private prisma: PrismaClient;
 
   constructor(walletProvider: ViemWalletProvider) {
     console.log('Constructing VicciCampaignProvider');
@@ -29,6 +31,7 @@ class VicciCampaignProvider extends ActionProvider<ViemWalletProvider> {
     this.walletProvider = walletProvider;
     this.factoryAddress = VicciFactoryABI.addresses["84532"];
     this.mockTokenAddress = MockERC20ABI.addresses["84532"];
+    this.prisma = new PrismaClient();
   }
 
   @CreateAction({
@@ -121,6 +124,33 @@ class VicciCampaignProvider extends ActionProvider<ViemWalletProvider> {
       }
 
       const rewardContractAddress = logs[0].args.rewardContract as `0x${string}`;
+
+      // Look up venue by address to get the venue ID
+      const venue = await this.prisma.venue.findUnique({
+        where: {
+          address: args.venue.toLowerCase()
+        }
+      });
+
+      if (!venue) {
+        throw new Error(`No venue found with address ${args.venue}. Please ensure the venue is registered first.`);
+      }
+
+      // Add campaign to database
+      await this.prisma.campaign.create({
+        data: {
+          venueId: venue.id,
+          protocol: this.factoryAddress,
+          objective: args.campaignId,
+          rewardToken: args.rewardToken,
+          rewardType: 'ERC20',
+          rewardContractAddress: rewardContractAddress,
+          amount: BigInt(args.initialRewardPool),
+          validUntil: new Date('2050-01-01'),
+          createdAt: new Date()
+        }
+      });
+      
       return `Successfully deployed reward contract at ${rewardContractAddress}`;
     } catch (error) {
       console.error('Campaign creation failed:', error);

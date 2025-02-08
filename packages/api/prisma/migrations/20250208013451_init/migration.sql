@@ -32,6 +32,7 @@ CREATE TABLE "Campaign" (
     "objective" TEXT NOT NULL,
     "rewardToken" TEXT NOT NULL,
     "rewardType" TEXT NOT NULL,
+    "rewardContractAddress" TEXT NOT NULL,
     "amount" BIGINT NOT NULL,
     "validUntil" TIMESTAMP(3) NOT NULL,
     "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,

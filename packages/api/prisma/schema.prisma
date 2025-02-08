@@ -33,17 +33,18 @@ model Venue {
 }
 
 model Campaign {
-  id          String    @id @default(uuid())
-  venueId     String    
-  venue       Venue     @relation(fields: [venueId], references: [id])
-  protocol    String
-  objective   String
-  rewardToken String
-  rewardType  String
-  amount      BigInt
-  validUntil  DateTime
-  createdAt   DateTime  @default(now())
-  permits     Permit[]
+  id                    String    @id @default(uuid())
+  venueId              String    
+  venue                Venue     @relation(fields: [venueId], references: [id])
+  protocol             String
+  objective            String
+  rewardToken          String
+  rewardType           String
+  rewardContractAddress String
+  amount               BigInt
+  validUntil           DateTime
+  createdAt            DateTime  @default(now())
+  permits              Permit[]
 }
 
 model Permit {

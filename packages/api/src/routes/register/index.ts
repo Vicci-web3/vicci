@@ -10,6 +10,10 @@ interface RegisterBody {
   type: 'visitor' | 'venue'
 }
 
+function normalizeAddress(address: string): string {
+  return address.toLowerCase();
+}
+
 const register: FastifyPluginAsync = async (fastify): Promise<void> => {
   // Add nonce generation endpoint
   fastify.get('/nonce', async function (
@@ -131,7 +135,7 @@ const register: FastifyPluginAsync = async (fastify): Promise<void> => {
       if (type === 'visitor') {
         user = await fastify.prisma.visitor.create({
           data: {
-            address,
+            address: normalizeAddress(address),
             email,
             name,
             type: 'visitor'
@@ -143,14 +147,23 @@ const register: FastifyPluginAsync = async (fastify): Promise<void> => {
             error: 'Name is required for venue registration'
           })
         }
+        console.log('Creating venue with data:', {
+          address: normalizeAddress(address),
+          email,
+          name,
+          type: 'venue'
+        });
+
         user = await fastify.prisma.venue.create({
           data: {
-            address,
+            address: normalizeAddress(address),
             email,
             name,
             type: 'venue'
           }
         })
+
+        console.log('Created venue:', user);
       }
 
       console.log('User created:', user)

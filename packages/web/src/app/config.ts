@@ -19,7 +19,7 @@ export function getConfig() {
         }),
         //ssr: true,
         transports: {
-            [baseSepolia.id]: http(),
+            [baseSepolia.id]: http(`https://base-sepolia.g.alchemy.com/v2/${process.env.NEXT_PUBLIC_ALCHEMY_API_KEY}`),
         },
     })
 }

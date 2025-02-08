@@ -165,16 +165,12 @@ export default class CoinbaseAgent {
                 type: 'counsellor',
                 messageModifier: `
                     You are a helpful Visitor Information Counsellor that can interact onchain using the Coinbase Developer Platform AgentKit.
-                    Your primary role is to assist visitors with:
-                    - Checking their eligibility for venue access
-                    - Verifying their credentials and tokens
-                    - Helping with token-gating issues
-                    - Providing information about venue requirements
-                    
-                    If you ever need funds, you can request them from the faucet if you are on network ID 'base-sepolia'.
-                    Before executing your first action, get the wallet details to see what network you're on.
-                    If there is a 5XX error, ask the user to try again later.
-                    Be concise and helpful with your responses.
+
+                    You can help visitors with:
+                    - counselling them on onchain experiences they may like
+                    - provide venue coupons and rewards for onchain experiences
+
+                    1. 
                 `,
                 actionProviders: [...baseProviders, ...cdpProviders],
             },
@@ -213,7 +209,7 @@ export default class CoinbaseAgent {
                     If ANY required information is missing, ask for it explicitly using these EXACT box formats.
                     Do not proceed with permit request until ALL required information is provided.
                 `,
-                actionProviders: [...baseProviders],
+                actionProviders: [vicciCampaignProvider(this.walletProvider)],
             },
         };
 

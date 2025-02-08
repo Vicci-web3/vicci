@@ -1,19 +1,49 @@
 'use client'
 
-import { useState } from 'react'
 import { useAccount } from 'wagmi'
 import { useRouter } from 'next/navigation'
-import { useEffect } from 'react'
+import { useEffect, useState } from 'react'
 import { Header } from '@/components/header'
 import { useAuth } from '@/hooks/useAuth'
-import { CampaignForm } from '@/components/campaign-form'
 import { ChatWindow } from '@/components/chat-window'
+import { formatAddress } from '@/lib/utils'
+
+type Campaign = {
+  id: string
+  rewardContractAddress: string
+  rewardToken: string
+  objective: string // This is our campaignId
+  amount: string
+  createdAt: string
+}
 
 export default function VenueDashboard() {
   const { address, isConnected } = useAccount()
   const router = useRouter()
   const { isAuthenticated, loading } = useAuth()
-  const [showCampaignForm, setShowCampaignForm] = useState(false)
+  const [campaigns, setCampaigns] = useState<Campaign[]>([])
+  const [loadingCampaigns, setLoadingCampaigns] = useState(true)
+
+  useEffect(() => {
+    const fetchCampaigns = async () => {
+      if (!address) return
+      
+      try {
+        const response = await fetch(`/api/venue/campaigns?address=${address}`);
+        if (!response.ok) {
+          throw new Error('Failed to fetch campaigns');
+        }
+        const data = await response.json();
+        setCampaigns(data);
+      } catch (error) {
+        console.error('Error fetching campaigns:', error)
+      } finally {
+        setLoadingCampaigns(false)
+      }
+    }
+
+    fetchCampaigns()
+  }, [address])
 
   useEffect(() => {
     if (!loading && (!isConnected || !isAuthenticated)) {
@@ -46,35 +76,43 @@ export default function VenueDashboard() {
             </div>
           </div>
 
-          {/* Campaign List will go here */}
+          {/* Campaign List */}
           <div className="bg-white/5 backdrop-blur-sm rounded-lg border border-white/10 p-6">
-            <div className="flex flex-col items-center justify-center min-h-[200px]">
-              <button
-                onClick={() => setShowCampaignForm(true)}
-                className="px-6 py-3 bg-blue-600 text-white rounded-md hover:bg-blue-700 transition-colors"
-              >
-                Add Campaign
-              </button>
-            </div>
+            <h2 className="text-xl font-semibold text-white mb-4">Your Campaigns</h2>
+            {loadingCampaigns ? (
+              <div className="text-white text-center py-8">Loading campaigns...</div>
+            ) : campaigns.length === 0 ? (
+              <div className="text-white/70 text-center py-8">
+                No campaigns found. Use the chat below to create one!
+              </div>
+            ) : (
+              <div className="space-y-4">
+                {campaigns.map((campaign) => (
+                  <div 
+                    key={campaign.id} 
+                    className="p-4 bg-white/5 rounded-lg border border-white/10"
+                  >
+                    <div className="text-white">
+                      <p className="font-medium">Campaign ID: {campaign.objective}</p>
+                      <p className="text-sm opacity-70">
+                        Reward Contract: {formatAddress(campaign.rewardContractAddress)}
+                      </p>
+                      <p className="text-sm opacity-70">
+                        Reward Token: {formatAddress(campaign.rewardToken)}
+                      </p>
+                      <p className="text-sm opacity-70">
+                        Amount: {campaign.amount}
+                      </p>
+                      <p className="text-sm opacity-70">
+                        Created: {new Date(campaign.createdAt).toLocaleDateString()}
+                      </p>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
           </div>
 
-          {/* Campaign Form Modal */}
-          {showCampaignForm && (
-            <div className="fixed inset-0 bg-black/80 backdrop-blur-sm flex items-center justify-center p-4">
-              <div className="relative w-full max-w-2xl">
-                <button
-                  onClick={() => setShowCampaignForm(false)}
-                  className="absolute top-4 right-4 text-white/70 hover:text-white"
-                >
-                  <span className="sr-only">Close</span>
-                  <svg className="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-                  </svg>
-                </button>
-                <CampaignForm onSuccess={() => setShowCampaignForm(false)} />
-              </div>
-            </div>
-          )}
           <ChatWindow agentType="campaignManager" />
         </div>
       </main>
