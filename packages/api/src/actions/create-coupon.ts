@@ -1,7 +1,11 @@
 import { z } from "zod";
 import { ActionProvider, Network, CreateAction } from "@coinbase/agentkit";
 import { ViemWalletProvider } from "@coinbase/agentkit";
-import VicciFactoryABI from '../abi/VicciRewardERC20Factory.json';
+import VicciRewardERC20ABI from '../abi/VicciRewardERC20.json';
+import { PrismaClient } from "@prisma/client";
+import { createWalletClient, createPublicClient, http } from 'viem'
+import { privateKeyToAccount } from 'viem/accounts'
+import { baseSepolia } from 'viem/chains'
 
 console.log('Loading create-coupon.ts');
 
@@ -16,52 +20,90 @@ export const CreateCouponSchema = z.object({
 
 class VicciCouponProvider extends ActionProvider<ViemWalletProvider> {
   protected walletProvider: ViemWalletProvider;
+  private prisma: PrismaClient;
+  private walletClient: any;
+  private publicClient: any;
 
   constructor(walletProvider: ViemWalletProvider) {
     console.log('Constructing VicciCouponProvider');
     super("vicci-coupon-provider", []);
     this.walletProvider = walletProvider;
+    this.prisma = new PrismaClient();
+
+    // Initialize viem clients
+    const privateKey = process.env.AGENT_PRIVATE_KEY
+    if (!privateKey) {
+      throw new Error('AGENT_PRIVATE_KEY environment variable is required')
+    }
+
+    const transport = http(`https://base-sepolia.g.alchemy.com/v2/${process.env.ALCHEMY_API_KEY}`)
+    const account = privateKeyToAccount(privateKey as `0x${string}`)
+
+    this.publicClient = createPublicClient({
+      chain: baseSepolia,
+      transport,
+    })
+
+    this.walletClient = createWalletClient({
+      account,
+      chain: baseSepolia,
+      transport,
+    })
   }
 
   @CreateAction({
     name: "create-coupon",
-    description: `
-    Creates a signed permit for a visitor to claim rewards from a VicciRewardERC20 contract.
-    
-    Required parameters:
-    - rewardContract: Address of the reward contract
-    - user: Address of the visitor claiming the reward
-    - amount: Amount of tokens to reward
-    - deadline: (Optional) Timestamp when the permit expires
-
-    Returns a signed permit that can be used with the claimReward function.
-    `,
+    description: `Creates a signed permit for a visitor to claim rewards`,
     schema: CreateCouponSchema,
   })
   async createCoupon(args: z.infer<typeof CreateCouponSchema>): Promise<string> {
     try {
-      const client = (this.walletProvider as any)['#walletClient'];
+      // Use findFirst instead of findUnique
+      const campaign = await this.prisma.campaign.findFirst({
+        where: {
+          objective: args.campainId
+        },
+        select: {
+          id: true,
+          rewardContractAddress: true
+        }
+      });
       
-      // Get the nonce for the user from the reward contract
-      const nonce = await this.walletProvider.readContract({
-        address: args.rewardContract as `0x${string}`,
-        abi: VicciFactoryABI.abi,
+      if (!campaign) {
+        throw new Error(`Campaign not found with objective: ${args.campainId}`);
+      }
+
+      // Find visitor
+      const visitor = await this.prisma.visitor.findUnique({
+        where: {
+          address: args.user.toLowerCase()
+        }
+      });
+
+      if (!visitor) {
+        throw new Error(`Visitor not found with address: ${args.user}`);
+      }
+
+      // Use publicClient for reading contract data
+      const nonce = await this.publicClient.readContract({
+        address: campaign.rewardContractAddress as `0x${string}`,
+        abi: VicciRewardERC20ABI.abi,
         functionName: 'nonces',
         args: [args.user as `0x${string}`]
       });
 
-      // Default deadline to 1 hour from now if not specified
+      // Default deadline to 60 days from now if not specified
       const deadline = args.deadline ? 
         BigInt(args.deadline) : 
-        BigInt(Math.floor(Date.now() / 1000) + 3600);
+        BigInt(Math.floor(Date.now() / 1000) + 3600 * 24 * 60);
 
-      // Sign the permit using EIP-712
-      const signature = await client.signTypedData({
+      // Use walletClient for signing
+      const signature = await this.walletClient.signTypedData({
         domain: {
           name: "VicciReward",
           version: "4",
-          chainId: await client.getChainId(),
-          verifyingContract: args.rewardContract
+          chainId: await this.publicClient.getChainId(),
+          verifyingContract: campaign.rewardContractAddress as `0x${string}`
         },
         types: {
           RewardClaim: [
@@ -79,6 +121,20 @@ class VicciCouponProvider extends ActionProvider<ViemWalletProvider> {
           nonce
         }
       });
+
+      // Store the permit
+      const permit = await this.prisma.permit.create({
+        data: {
+          id: `${campaign.id}-${visitor.id}`,
+          campaignId: campaign.id,
+          visitorId: visitor.id,
+          signature: signature,
+          claimed: false,
+          createdAt: new Date()
+        }
+      });
+
+      console.log('Stored permit:', permit);
 
       return signature;
 

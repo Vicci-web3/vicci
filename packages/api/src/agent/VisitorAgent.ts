@@ -223,6 +223,7 @@ export default class VisitorAgent {
             const walletProvider = await CdpWalletProvider.configureWithWallet(config);
             */
             const agentConfig = this.getAgentConfig();
+            console.log('this.walletProvider', this.walletProvider);
             const agentkit = await AgentKit.from({
                 //this.walletProvider,
                 cdpApiKeyName: process.env.CDP_API_KEY_NAME,

@@ -18,5 +18,5 @@ export function createWalletProvider() {
     transport,
   })
 
-  return new ViemWalletProvider(client, transport)
+  return new ViemWalletProvider(client)
 } 

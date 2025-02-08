@@ -37,7 +37,7 @@ model Campaign {
   venueId              String    
   venue                Venue     @relation(fields: [venueId], references: [id])
   protocol             String
-  objective            String
+  objective            String    @unique
   rewardToken          String
   rewardType           String
   rewardContractAddress String
