@@ -18,12 +18,13 @@ RUN pnpm install
 # Copy source code and prisma
 COPY packages/api ./packages/api
 
-# Generate Prisma client
+# Generate Prisma client and build TypeScript
 RUN cd packages/api && \
-    npx prisma generate
+    npx prisma generate && \
+    pnpm build
 
 # Set production environment
 ENV NODE_ENV=production
 
 # Wait for Postgres and start
-CMD ["sh", "-c", "until nc -z postgres 5432; do echo waiting for postgres; sleep 2; done; cd packages/api && npx prisma migrate deploy && tsx src/server.ts"]
+CMD ["sh", "-c", "until nc -z postgres 5432; do echo waiting for postgres; sleep 2; done; cd packages/api && npx prisma migrate deploy && node dist/server.js"]
