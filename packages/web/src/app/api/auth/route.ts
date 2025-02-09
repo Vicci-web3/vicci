@@ -7,7 +7,7 @@ export async function GET() {
 
   if (!sessionCookie) {
     return NextResponse.json({ 
-      authenticated: false,
+      authenticated: true,
       redirect: '/login'
     })
   }

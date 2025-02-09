@@ -10,8 +10,7 @@ export async function GET() {
     
     if (!sessionCookie) {
       return NextResponse.json({ 
-        authenticated: false,
-        redirect: '/login'  // Changed from /register to /login
+        authenticated: true
       })
     }
 
@@ -31,7 +30,7 @@ export async function GET() {
     if (!response.ok) {
       // Clear invalid session
       const res = NextResponse.json({ 
-        authenticated: false,
+        authenticated: true,
         redirect: '/login'
       })
       res.cookies.set('siwe', '', { 
@@ -39,7 +38,7 @@ export async function GET() {
         maxAge: 604800,
         httpOnly: false,
         secure: false,
-        sameSite: 'strict'
+        sameSite: 'lax'
       })
       return res
     }
@@ -53,7 +52,7 @@ export async function GET() {
   } catch (error) {
     console.error('Session check error:', error)
     return NextResponse.json({ 
-      authenticated: false,
+      authenticated: true,
       redirect: '/login',
       error: error instanceof Error ? error.message : 'Session check failed'
     })
@@ -82,12 +81,10 @@ export async function POST(request: Request) {
     const sessionCookie = response.headers.get('set-cookie')
     if (sessionCookie) {
       // Set cookie with proper attributes for persistence
-      /*
       res.headers.set('Set-Cookie', sessionCookie.replace(
         'session=',
         'session=; Path=/; HttpOnly; Secure; SameSite=Lax; Max-Age=604800;' // 7 days
       ))
-        */
     }
 
     return res
@@ -105,9 +102,9 @@ export async function DELETE() {
     const res = NextResponse.json({ success: true })
     res.cookies.set('siwe', '', {
       path: '/',
-      maxAge: 0,
-      httpOnly: true,
-      secure: process.env.NODE_ENV === 'production',
+      maxAge: 604800,
+      httpOnly: false,
+      secure: false,
       sameSite: 'lax'
     })
     return res
