@@ -9,7 +9,7 @@
     "prisma:migrate": "npx prisma migrate deploy",
     "db:init": "pnpm prisma:generate && pnpm prisma:migrate",
     "db:push": "npx prisma db push",
-    "start:prod": "npx prisma generate && npx prisma migrate deploy && node dist/server.js"
+    "start:prod": "pnpm db:init && node dist/server.js"
   },
   "dependencies": {
     "@coinbase/agentkit": "^0.1.1",

@@ -24,7 +24,8 @@ RUN cd packages/indexer-agent && \
 COPY packages/indexer-agent ./packages/indexer-agent
 RUN cd packages/indexer-agent && \
     pnpm build:graph && \
-    pnpm build
+    pnpm build && \
+    ls -la dist/  # Verify build output
 
 # Production stage
 FROM node:23-alpine AS production
@@ -52,5 +53,5 @@ COPY --from=builder /usr/src/app/packages/indexer-agent/.graphclient ./packages/
 # Set production environment
 ENV NODE_ENV=production
 
-# Start the indexer agent
-CMD ["pnpm", "--filter", "@vic/indexer-agent", "start:prod"]
+# Wait for Postgres to be ready before starting
+CMD ["sh", "-c", "until nc -z postgres 5432; do echo waiting for postgres; sleep 2; done; cd packages/indexer-agent && npx prisma migrate deploy && node dist/index.js"]
