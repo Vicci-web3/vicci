@@ -1,0 +1,51 @@
+FROM node:23-alpine AS builder
+
+WORKDIR /usr/src/app
+
+# Install build dependencies
+RUN apk add --no-cache git
+
+# Install specific pnpm version globally
+RUN npm install -g pnpm@9.15.5
+
+# Copy workspace files first for better caching
+COPY package*.json pnpm-workspace.yaml pnpm-lock.yaml ./
+COPY packages/api/package*.json ./packages/api/
+
+# Install all dependencies for build
+RUN pnpm install --frozen-lockfile
+
+# Copy source code
+COPY packages/api ./packages/api
+
+# Generate Prisma client and build
+RUN cd packages/api && \
+    pnpm prisma generate && \
+    pnpm build
+
+# Production stage
+FROM node:23-alpine AS production
+
+WORKDIR /usr/src/app
+
+# Install production dependencies only
+RUN apk add --no-cache git && \
+    npm install -g pnpm@9.15.5
+
+# Copy package files
+COPY package*.json pnpm-workspace.yaml pnpm-lock.yaml ./
+COPY packages/api/package*.json ./packages/api/
+
+# Install production dependencies only
+RUN pnpm install --frozen-lockfile --prod
+
+# Copy built application from builder
+COPY --from=builder /usr/src/app/packages/api/dist ./packages/api/dist
+COPY --from=builder /usr/src/app/packages/api/prisma ./packages/api/prisma
+COPY --from=builder /usr/src/app/packages/api/node_modules/.prisma ./packages/api/node_modules/.prisma
+
+# Set production environment
+ENV NODE_ENV=production
+
+# Start the server
+CMD ["pnpm", "--filter", "@vic/api", "start:prod"]
