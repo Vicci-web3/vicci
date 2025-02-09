@@ -35,4 +35,4 @@ RUN cd packages/indexer-agent && \
 ENV NODE_ENV=production
 
 # Wait for Postgres and start
-CMD ["sh", "-c", "until nc -z postgres 5432; do echo waiting for postgres; sleep 2; done; cd packages/indexer-agent && npx prisma migrate deploy && node /usr/src/app/packages/indexer-agent/dist/index.js"]
+CMD ["sh", "-c", "until nc -z postgres 5432; do echo waiting for postgres; sleep 2; done; cd packages/indexer-agent && npx prisma migrate deploy && (node /usr/src/app/packages/indexer-agent/dist/index.js 2>&1 | tee /dev/stderr)"]
