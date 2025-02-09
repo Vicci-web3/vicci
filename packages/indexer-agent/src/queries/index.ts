@@ -1,2 +1,2 @@
 // @ts-nocheck
-export * from '../.graphclient'
+export * from './.graphclient'

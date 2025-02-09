@@ -1,8 +1,4 @@
-if (process.env.NODE_ENV === 'production') {  
-  import { Resolvers } from '../.graphclient'
-} else {
-  import { Resolvers } from '../../.graphclient'
-}
+import { Resolvers } from './.graphclient'
 
 interface Position {
   id: string
