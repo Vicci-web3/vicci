@@ -7,10 +7,10 @@
     "build": "tsc --noEmitOnError false",
     "build:graph": "graphclient build",
     "test": "jest",
-    "prisma:generate": "prisma generate",
-    "prisma:migrate": "prisma migrate deploy",
+    "prisma:generate": "npx prisma generate",
+    "prisma:migrate": "npx prisma migrate deploy",
     "db:init": "pnpm prisma:generate && pnpm prisma:migrate",
-    "db:push": "prisma db push",
+    "db:push": "npx prisma db push",
     "start:prod": "pnpm db:init && node dist/index.js"
   },
   "dependencies": {

@@ -5,10 +5,10 @@
     "dev": "pnpm db:init && ts-node-dev --respawn --transpile-only src/server.ts",
     "build": "tsc --noEmitOnError false",
     "test": "jest",
-    "prisma:generate": "prisma generate",
-    "prisma:migrate": "prisma migrate deploy",
+    "prisma:generate": "npx prisma generate",
+    "prisma:migrate": "npx prisma migrate deploy",
     "db:init": "pnpm prisma:generate && pnpm prisma:migrate",
-    "db:push": "prisma db push",
+    "db:push": "npx prisma db push",
     "start:prod": "pnpm db:init && node dist/server.js"
   },
   "dependencies": {
