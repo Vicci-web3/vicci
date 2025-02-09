@@ -259,10 +259,10 @@ export default class VisitorAgent {
             const agentConfig = this.getAgentConfig();
             console.log('this.walletProvider', this.walletProvider);
             const agentkit = await AgentKit.from({
-                //this.walletProvider,
+                walletProvider: this.walletProvider,
                 cdpApiKeyName: process.env.CDP_API_KEY_NAME,
-                cdpApiKeyPrivateKey: process.env.CDP_API_KEY_PRIVATE_KEY?.replace(/\\n/g, "\n"),
-                actionProviders: [vicciCouponProvider(this.walletProvider)],
+                cdpApiKeyPrivateKey: process.env.CDP_API_KEY_PRIVATE_KEY,
+                actionProviders: agentConfig.actionProviders,
             });
 
             const tools = await getLangChainTools(agentkit);
