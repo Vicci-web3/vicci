@@ -29,7 +29,7 @@ services:
       AGENT_PRIVATE_KEY: ${AGENT_PRIVATE_KEY}
       ALCHEMY_API_KEY: ${ALCHEMY_API_KEY}
       WS_PORT: 3000
-    command: pnpm --filter @vic/api dev
+    command: pnpm --filter @vic/api start
     env_file: .env
 
   indexer_agent:
