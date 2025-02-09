@@ -1,7 +1,7 @@
 # 🎯 Vicci: AI-Powered Protocol Growth Engine
 
 <div align="center">
-  <img src="../images/banner.jpg" alt="Project Banner" width="800"/>
+  <img src="https://github.com/user-attachments/assets/38499efd-68cf-4148-a138-89f2882df2bf" alt="Project Banner" width  ="800"/>
 </div>
 
 ## 🌟 Overview
@@ -9,7 +9,7 @@
 Vicci is a revolutionary decentralized system for protocol growth that leverages AI agents to analyze on-chain behavior and distribute targeted reward permits to high-value potential users. Our platform enables protocols to acquire users based on demonstrated on-chain behaviors rather than traditional marketing channels.
 
 <div align="center">
-  <img src="../images/logo-square.jpg" alt="Logo" width="200"/>
+  <img src="https://github.com/user-attachments/assets/b13311ac-027e-496d-9685-2b5f4cc5e806" alt="Logo" width="200"/>
 </div>
 
 ## 🏗️ Tech Stack
