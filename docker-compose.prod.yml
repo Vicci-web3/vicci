@@ -3,12 +3,11 @@ services:
   api:
     build:
       context: .
-      dockerfile: packages/api/Dockerfile
+      dockerfile: packages/api/Dockerfile.prod
     volumes:
       - .:/usr/src/app:cached
       - /usr/src/app/node_modules
       - /usr/src/app/packages/api/node_modules
-      - /usr/src/app/packages/shared/node_modules
     ports:
       - "3001:3000"
     depends_on:
