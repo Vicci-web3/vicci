@@ -2,7 +2,7 @@ import { NextResponse } from 'next/server'
 import { cookies } from 'next/headers'
 
 export async function GET() {
-  const cookieStore = cookies()
+  const cookieStore = await cookies()
   const sessionCookie = cookieStore.get('siwe')
 
   if (!sessionCookie) {
@@ -17,7 +17,7 @@ export async function GET() {
     const session = JSON.parse(sessionCookie.value)
     
     // Verify session with API
-    const response = await fetch(`${process.env.API_URL}/api/auth/verify`, {
+    const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/auth/verify`, {
       headers: {
         Authorization: `Bearer ${session.signature}`,
         'X-SIWE-Message': session.message,
