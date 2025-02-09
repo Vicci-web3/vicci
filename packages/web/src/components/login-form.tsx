@@ -38,7 +38,7 @@ export function LoginForm() {
 
       // Create SIWE message
       const message = new SiweMessage({
-        domain: 'localhost',
+        domain: process.env.NODE_ENV === 'production' ? 'vicci-web3.info' : 'localhost',
         address,
         statement: `Sign in with Ethereum to access Visitor Information Center as ${loginType}`,
         uri: window.location.origin,

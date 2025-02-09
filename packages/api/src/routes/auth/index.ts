@@ -26,7 +26,7 @@ const auth: FastifyPluginAsync = async (fastify): Promise<void> => {
       console.log('Found session cookie:', session)
       const { message, signature, nonce } = JSON.parse(session)
       const siweMessage = new SiweMessage(message)
-      
+      console.log('request.hostname:', request.hostname) 
       console.log('Verifying session with:', {
         domain: request.hostname,
         nonce,
