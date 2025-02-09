@@ -79,7 +79,8 @@ export function Header() {
       localStorage.removeItem('wagmi.recentConnectorId')
 
       // Navigate home
-      router.push('/')
+      window.location.href = '/'
+      //router.push('/')
     } catch (error) {
       console.error('Logout error:', error)
     }

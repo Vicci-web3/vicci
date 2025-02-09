@@ -104,7 +104,7 @@ export function RegistrationForm() {
 
       // Create SIWE message
       const message = new SiweMessage({
-        domain: 'localhost',
+        domain: process.env.NODE_ENV === 'production' ? 'vicci-web3.info' : 'localhost',
         address,
         statement: `Register with Ethereum to access Visitor Information Center as ${registerType}`,
         uri: window.location.origin,
@@ -155,7 +155,8 @@ export function RegistrationForm() {
       }
 
       setIsAuthenticated(true)
-      router.push(`/dashboard/${registerType}`)
+      window.location.href = `/dashboard/${registerType}`
+      //router.push(`/dashboard/${registerType}`)
     } catch (err) {
       console.error('Registration error:', err)
       setError(err instanceof Error ? err.message : 'Failed to register')

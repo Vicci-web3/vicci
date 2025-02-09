@@ -78,7 +78,8 @@ export function LoginForm() {
       }
 
       setIsAuthenticated(true)
-      router.push(`/dashboard/${loginType}`)
+      window.location.href = `/dashboard/${loginType}`
+      //router.push(`/dashboard/${loginType}`)
     } catch (err) {
       console.error('Login error:', err)
       setError(err instanceof Error ? err.message : 'Failed to sign in')
