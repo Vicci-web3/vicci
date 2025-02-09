@@ -82,10 +82,12 @@ export async function POST(request: Request) {
     const sessionCookie = response.headers.get('set-cookie')
     if (sessionCookie) {
       // Set cookie with proper attributes for persistence
+      /*
       res.headers.set('Set-Cookie', sessionCookie.replace(
         'session=',
-        'session=; Path=/; HttpOnly; Secure; SameSite=Strict; Max-Age=604800;' // 7 days
+        'session=; Path=/; HttpOnly; Secure; SameSite=Lax; Max-Age=604800;' // 7 days
       ))
+        */
     }
 
     return res
@@ -106,7 +108,7 @@ export async function DELETE() {
       maxAge: 0,
       httpOnly: true,
       secure: process.env.NODE_ENV === 'production',
-      sameSite: 'strict'
+      sameSite: 'lax'
     })
     return res
   } catch (error) {

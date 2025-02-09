@@ -128,12 +128,12 @@ const auth: FastifyPluginAsync = async (fastify): Promise<void> => {
       console.log('Setting session cookie:', sessionData)
 
       reply.setCookie('siwe', JSON.stringify(sessionData), {
-        httpOnly: true,
-        secure: process.env.NODE_ENV === 'production',
+        httpOnly: false,
+        secure: false,
         sameSite: 'lax',
         path: '/',
-        domain: 'localhost',
-        maxAge: 60 * 60 * 24 * 7 // 1 week
+        domain: process.env.NODE_ENV === 'production' ? 'vicci-web3.info' : 'localhost',
+        maxAge: 604800 // 7 days
       })
 
       const response = { 
@@ -159,7 +159,7 @@ const auth: FastifyPluginAsync = async (fastify): Promise<void> => {
     // Clear all auth-related cookies
     reply.clearCookie('siwe', {
       path: '/',
-      domain: 'localhost'
+      domain: process.env.NODE_ENV === 'production' ? 'vicci-web3.info' : 'localhost'
     })
     return { authenticated: false }
   })

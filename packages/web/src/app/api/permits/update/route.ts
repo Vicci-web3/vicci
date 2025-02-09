@@ -3,7 +3,7 @@ import { NextRequest } from 'next/server';
 export async function POST(request: NextRequest) {
   console.log('🚀 [Next.js Permits Update API] Route handler triggered');
 
-  if (!process.env.API_URL) {
+  if (!process.env.NEXT_PUBLIC_API_URL) {
     console.error('❌ [Next.js Permits Update API] API_URL environment variable is not set');
     return Response.json(
       { error: 'API configuration error', details: 'API_URL is not configured' },
@@ -25,7 +25,7 @@ export async function POST(request: NextRequest) {
 
     console.log('🎯 [Next.js Permits Update API] Updating permit:', permitId);
     
-    const response = await fetch(`${process.env.API_URL}/permits/${permitId}`, {
+    const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/permits/${permitId}`, {
       method: 'PATCH',
       headers: {
         'Content-Type': 'application/json',

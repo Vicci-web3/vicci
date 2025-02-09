@@ -57,7 +57,7 @@ export async function POST(request: Request) {
       path: '/',
       httpOnly: false,
       secure: false,
-      sameSite: 'strict',
+      sameSite: 'lax',
       maxAge: 604800 // 7 days
     })
     return res
