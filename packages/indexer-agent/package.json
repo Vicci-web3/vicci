@@ -11,7 +11,7 @@
     "prisma:migrate": "npx prisma migrate deploy",
     "db:init": "pnpm prisma:generate && pnpm prisma:migrate",
     "db:push": "npx prisma db push",
-    "start:prod": "pnpm db:init && node dist/index.js"
+    "start:prod": "npx prisma generate && npx prisma migrate deploy && node dist/index.js"
   },
   "dependencies": {
     "@graphql-mesh/cache-localforage": "^0.x",
