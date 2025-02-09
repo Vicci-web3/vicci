@@ -15,13 +15,17 @@ COPY packages/api/package*.json ./packages/api/
 # Install all dependencies for build
 RUN pnpm install --frozen-lockfile
 
+# Copy prisma schema first (for better layer caching)
+COPY packages/api/prisma ./packages/api/prisma
+
+# Generate Prisma client before copying rest of the code
+RUN cd packages/api && pnpm prisma generate
+
 # Copy source code
 COPY packages/api ./packages/api
 
-# Generate Prisma client and build
-RUN cd packages/api && \
-    pnpm prisma generate && \
-    pnpm build
+# Build TypeScript
+RUN cd packages/api && pnpm build
 
 # Production stage
 FROM node:23-alpine AS production
