@@ -22,7 +22,14 @@ COPY packages/indexer-agent ./packages/indexer-agent
 RUN cd packages/indexer-agent && \
     npx prisma generate && \
     pnpm build:graph && \
-    pnpm build
+    echo "Building TypeScript..." && \
+    pnpm build && \
+    echo "Checking build output:" && \
+    ls -la dist/ || echo "dist directory not found!" && \
+    echo "Current directory:" && \
+    pwd && \
+    echo "Directory contents:" && \
+    ls -la
 
 # Set production environment
 ENV NODE_ENV=production
