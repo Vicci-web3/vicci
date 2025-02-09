@@ -105,7 +105,8 @@ export function VisitorChatWindow({ onClose }: VisitorChatWindowProps) {
   useEffect(() => {
     if (isOpen && !ws) {
       setConnecting(true)
-      const websocket = new WebSocket(`ws://${window.location.hostname}:3000/ws/agent/visitor`)
+      const websocketUrl = process.env.NODE_ENV === 'production' ? 'wss://vicci-web3.info' : 'ws://localhost:3000'
+      const websocket = new WebSocket(`${websocketUrl}/ws/agent/visitor`)
       
       websocket.onopen = () => {
         console.log('WebSocket connected, initializing agent...');
