@@ -3,7 +3,7 @@ import { cookies } from 'next/headers'
 
 export async function GET() {
   try {
-    const cookieStore = cookies()
+    const cookieStore = await cookies()
     const sessionCookie = cookieStore.get('siwe')
     
     console.log('Checking existing session:', sessionCookie?.value)
@@ -19,7 +19,7 @@ export async function GET() {
     const session = JSON.parse(sessionCookie.value)
     
     // Verify session with API
-    const response = await fetch(`${process.env.API_URL}/api/auth/verify`, {
+    const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/auth/verify`, {
       headers: {
         Authorization: `Bearer ${session.signature}`,
         'X-SIWE-Message': session.message,
@@ -37,8 +37,8 @@ export async function GET() {
       res.cookies.set('siwe', '', { 
         path: '/',
         maxAge: 0,
-        httpOnly: true,
-        secure: process.env.NODE_ENV === 'production',
+        httpOnly: false,
+        secure: false,
         sameSite: 'strict'
       })
       return res
