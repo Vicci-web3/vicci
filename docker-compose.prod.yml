@@ -3,108 +3,122 @@ services:
   api:
     build:
       context: .
-      dockerfile: packages/api/Dockerfile.prod
+      dockerfile: packages/api/Dockerfile
+    volumes:
+      - .:/usr/src/app:cached
+      - /usr/src/app/node_modules
+      - /usr/src/app/packages/api/node_modules
+      - /usr/src/app/packages/shared/node_modules
     ports:
       - "3001:3000"
-    restart: unless-stopped
-    environment:
-      - NODE_ENV=production
-      - DATABASE_URL=${API_DATABASE_URL}
-      - RABBITMQ_URL=amqp://rabbitmq:5672
-      - GRAPH_API_KEY=${GRAPH_API_KEY}
-      - NETWORK_ID=${NETWORK_ID}
-      - CDP_API_KEY_NAME=${CDP_API_KEY_NAME}
-      - CDP_API_KEY_PRIVATE_KEY=${CDP_API_KEY_PRIVATE_KEY}
-      - COHERE_API_KEY=${COHERE_API_KEY}
-      - ANTHROPIC_API_KEY=${ANTHROPIC_API_KEY}
-      - AGENT_PRIVATE_KEY=${AGENT_PRIVATE_KEY}
-      - ALCHEMY_API_KEY=${ALCHEMY_API_KEY}
-      - WS_PORT=3000
     depends_on:
       postgres:
         condition: service_healthy
       rabbitmq:
         condition: service_healthy
-    expose:
-      - "3000"
+    environment:
+      DATABASE_URL: ${API_DATABASE_URL}
+      NODE_ENV: development
+      RABBITMQ_URL: amqp://rabbitmq:5672
+      GRAPH_API_KEY: ${GRAPH_API_KEY}
+      NETWORK_ID: ${NETWORK_ID}
+      CDP_API_KEY_NAME: ${CDP_API_KEY_NAME}
+      CDP_API_KEY_PRIVATE_KEY: ${CDP_API_KEY_PRIVATE_KEY}
+      COHERE_API_KEY: ${COHERE_API_KEY}
+      ANTHROPIC_API_KEY: ${ANTHROPIC_API_KEY}
+      AGENT_PRIVATE_KEY: ${AGENT_PRIVATE_KEY}
+      ALCHEMY_API_KEY: ${ALCHEMY_API_KEY}
+      WS_PORT: 3000
+    command: pnpm --filter @vic/api dev
+    env_file: .env
 
   indexer_agent:
     build:
       context: .
-      dockerfile: packages/indexer-agent/Dockerfile.prod
-    restart: unless-stopped
+      dockerfile: packages/indexer-agent/Dockerfile
+    volumes:
+      - .:/usr/src/app:cached
+      - /usr/src/app/node_modules
+      - /usr/src/app/packages/indexer-agent/node_modules
     environment:
-      - NODE_ENV=production
-      - DATABASE_URL=${INDEXER_AGENT_DATABASE_URL}
-      - RABBITMQ_URL=amqp://rabbitmq:5672
-      - GRAPH_API_KEY=${GRAPH_API_KEY}
-      - ALCHEMY_API_KEY=${ALCHEMY_API_KEY}
-      - VIC_PRIVATE_KEY=${VIC_PRIVATE_KEY}
-      - COHERE_API_KEY=${COHERE_API_KEY}
+      DATABASE_URL: ${INDEXER_AGENT_DATABASE_URL}
+      NODE_ENV: development
+      RABBITMQ_URL: amqp://rabbitmq:5672
+      GRAPH_API_KEY: ${GRAPH_API_KEY}
+      ALCHEMY_API_KEY: ${ALCHEMY_API_KEY}
+      VIC_PRIVATE_KEY: ${VIC_PRIVATE_KEY}
+      COHERE_API_KEY: ${COHERE_API_KEY}
+    command: pnpm --filter @vic/indexer-agent dev
     depends_on:
-      postgres:
-        condition: service_healthy
-      rabbitmq:
-        condition: service_healthy
+      - rabbitmq
+      - postgres
+    env_file:
+      - .env
+      - .env.graph
+
+  rabbitmq:
+    image: rabbitmq:3-management-alpine
+    ports:
+      - "5672:5672"
+      - "15672:15672"
+    healthcheck:
+      test: ["CMD", "rabbitmq-diagnostics", "check_port_connectivity"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+    volumes:
+      - rabbitmq_data:/var/lib/rabbitmq
+
+  postgres:
+    image: ankane/pgvector:v0.5.1
+    ports:
+      - "${POSTGRES_PORT}:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+      - ./docker/postgres:/docker-entrypoint-initdb.d
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+      POSTGRES_MULTIPLE_DATABASES: "api,analysis_agent,indexer_agent,permit_agent,counsellor_agent"
+    command: ["postgres", "-c", "shared_preload_libraries=vector"]
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER}"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
 
   web:
     build:
       context: .
-      dockerfile: packages/web/Dockerfile.prod
+      dockerfile: packages/web/Dockerfile
+    volumes:
+      - .:/usr/src/app:cached
+      - /usr/src/app/node_modules
+      - /usr/src/app/packages/web/node_modules
+      - /usr/src/app/packages/shared/node_modules
     ports:
       - "3003:3000"
-    restart: unless-stopped
     environment:
-      - NODE_ENV=production
-      - API_URL=http://api:3001
-      - NEXT_PUBLIC_ONCHAINKIT_API_KEY=${NEXT_PUBLIC_ONCHAINKIT_API_KEY}
-      - NEXT_PUBLIC_ALCHEMY_API_KEY=${ALCHEMY_API_KEY}
-    volumes:
-      - /usr/src/app/packages/web/.next:/root/vicci/packages/web/.next
-    expose:
-      - "3003"
+      NODE_ENV: development
+      NEXT_PUBLIC_API_URL: http://api:3000
+      NEXT_PUBLIC_ONCHAINKIT_API_KEY: ${NEXT_PUBLIC_ONCHAINKIT_API_KEY}
+      NEXT_PUBLIC_ALCHEMY_API_KEY: ${ALCHEMY_API_KEY}
+      API_URL: http://api:3001
+    command: pnpm --filter @vic/web dev
     depends_on:
       - api
+    env_file: .env
 
-  postgres:
-    image: ankane/pgvector:v0.5.1
-    restart: unless-stopped
+  nginx:
+    image: nginx:alpine
+    ports:
+      - "3000:80"
     volumes:
-      - postgres_data:/var/lib/postgresql/data
-      - ./docker/postgres/multiple-databases.sh:/docker-entrypoint-initdb.d/multiple-databases.sh
-    environment:
-      - POSTGRES_USER=${POSTGRES_USER}
-      - POSTGRES_PASSWORD=${POSTGRES_PASSWORD}
-      - POSTGRES_MULTIPLE_DATABASES=api,analysis_agent,indexer_agent,permit_agent,counsellor_agent
-    command: ["postgres", "-c", "shared_preload_libraries=vector"]
-    healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER}"]
-      interval: 30s
-      timeout: 5s
-      retries: 3
-    expose:
-      - "5432"
-
-  rabbitmq:
-    image: rabbitmq:3-management-alpine
-    restart: unless-stopped
-    volumes:
-      - rabbitmq_data:/var/lib/rabbitmq
-    healthcheck:
-      test: ["CMD", "rabbitmq-diagnostics", "check_port_connectivity"]
-      interval: 30s
-      timeout: 5s
-      retries: 3
-    expose:
-      - "5672"
-      - "15672"
+      - ./nginx.prod.conf:/etc/nginx/nginx.conf:ro
+    depends_on:
+      - web
+      - api
 
 volumes:
   postgres_data:
-    driver: local
-  rabbitmq_data:
-    driver: local
-
-networks:
-  default:
-    driver: bridge
+  rabbitmq_data: 
