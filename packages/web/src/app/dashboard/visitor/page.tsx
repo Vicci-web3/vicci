@@ -115,7 +115,7 @@ export default function VisitorDashboard() {
 
   useEffect(() => {
     if (!loading && (!isConnected || !isAuthenticated)) {
-      router.push('/register')
+      //router.push('/register')
     }
   }, [isConnected, isAuthenticated, loading, router])
 

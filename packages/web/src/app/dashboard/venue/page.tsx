@@ -48,7 +48,7 @@ export default function VenueDashboard() {
 
   useEffect(() => {
     if (!loading && (!isConnected || !isAuthenticated)) {
-      router.push('/register')
+      //router.push('/register')
     }
   }, [isConnected, isAuthenticated, loading, router])
 
