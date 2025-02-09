@@ -17,7 +17,8 @@ RUN pnpm install --frozen-lockfile
 
 # Copy prisma schema and generate client
 COPY packages/api/prisma ./packages/api/prisma
-RUN cd packages/api && pnpm prisma generate
+RUN cd packages/api && \
+    npx prisma generate
 
 # Copy source code and build
 COPY packages/api ./packages/api
@@ -40,7 +41,7 @@ COPY packages/api/prisma ./packages/api/prisma
 # Install production dependencies and generate Prisma client
 RUN pnpm install --frozen-lockfile --prod && \
     cd packages/api && \
-    pnpm prisma generate
+    npx prisma generate
 
 # Copy built application from builder
 COPY --from=builder /usr/src/app/packages/api/dist ./packages/api/dist
