@@ -15,12 +15,14 @@ COPY packages/indexer-agent/package*.json ./packages/indexer-agent/
 # Install all dependencies for build
 RUN pnpm install --frozen-lockfile
 
-# Copy source code
-COPY packages/indexer-agent ./packages/indexer-agent
-
-# Generate Prisma client, build GraphQL client, and compile TypeScript
+# Copy prisma schema and generate client
+COPY packages/indexer-agent/prisma ./packages/indexer-agent/prisma
 RUN cd packages/indexer-agent && \
-    pnpm prisma generate && \
+    npx prisma generate
+
+# Copy source code and build
+COPY packages/indexer-agent ./packages/indexer-agent
+RUN cd packages/indexer-agent && \
     pnpm build:graph && \
     pnpm build
 
@@ -36,14 +38,15 @@ RUN apk add --no-cache git && \
 # Copy package files
 COPY package*.json pnpm-workspace.yaml pnpm-lock.yaml ./
 COPY packages/indexer-agent/package*.json ./packages/indexer-agent/
+COPY packages/indexer-agent/prisma ./packages/indexer-agent/prisma
 
-# Install production dependencies only
-RUN pnpm install --frozen-lockfile --prod
+# Install production dependencies and generate Prisma client
+RUN pnpm install --frozen-lockfile --prod && \
+    cd packages/indexer-agent && \
+    npx prisma generate
 
 # Copy built application from builder
 COPY --from=builder /usr/src/app/packages/indexer-agent/dist ./packages/indexer-agent/dist
-COPY --from=builder /usr/src/app/packages/indexer-agent/prisma ./packages/indexer-agent/prisma
-COPY --from=builder /usr/src/app/packages/indexer-agent/node_modules/.prisma ./packages/indexer-agent/node_modules/.prisma
 COPY --from=builder /usr/src/app/packages/indexer-agent/.graphclient ./packages/indexer-agent/.graphclient
 
 # Set production environment
