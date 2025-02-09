@@ -3,7 +3,7 @@
   "version": "0.0.1",
   "scripts": {
     "dev": "pnpm db:init && ts-node-dev --respawn --transpile-only src/server.ts",
-    "build": "tsc",
+    "build": "tsc --noEmitOnError false",
     "test": "jest",
     "prisma:generate": "prisma generate",
     "prisma:migrate": "prisma migrate deploy",
