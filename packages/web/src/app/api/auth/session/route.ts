@@ -36,7 +36,7 @@ export async function GET() {
       })
       res.cookies.set('siwe', '', { 
         path: '/',
-        maxAge: 0,
+        maxAge: 604800,
         httpOnly: false,
         secure: false,
         sameSite: 'strict'
