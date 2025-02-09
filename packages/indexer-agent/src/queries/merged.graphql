@@ -1,7 +1,0 @@
-query GetMergedPositions {
-  mergedPositions {
-    id
-    owner
-    liquidity
-  }
-} 
