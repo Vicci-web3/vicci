@@ -91,7 +91,8 @@ class IndexerAgent {
       chainId: 1,
       indexingInterval: 100,
       // 2 hours in ms = 1000ms * 60s * 60m * 2h
-      pollInterval: 1000 * 60 * 60 * 2,
+      // 15 seconds in ms
+      pollInterval: 1000 * 15,
       llmConfig: {
         model: 'command',  // Cohere's latest model
         temperature: 0.7,

@@ -1,6 +1,6 @@
 'use client'
 
-import { useAccount, useContractRead, useContractWrite } from 'wagmi'
+import { useAccount, useReadContract, useWriteContract } from 'wagmi'
 import { useRouter } from 'next/navigation'
 import { useEffect, useState } from 'react'
 import { useAuth } from '@/hooks/useAuth'
@@ -20,20 +20,16 @@ export function Header() {
   const [userRoles, setUserRoles] = useState<UserRoles>({})
 
   // Read balance
-  const { data: balance } = useContractRead({
-    address: MockERC20.addresses['84532'],
+  const { data: balance } = useReadContract({
+    address: MockERC20.addresses['84532'] as `0x${string}`,
     abi: MockERC20.abi,
     functionName: 'balanceOf',
-    args: [address as `0x${string}`],
-    enabled: !!address,
+    args: address ? [address as `0x${string}`] : undefined,
   })
 
+
   // Faucet write
-  const { writeAsync: requestFaucet } = useContractWrite({
-    address: MockERC20.addresses['84532'],
-    abi: MockERC20.abi,
-    functionName: 'faucet',
-  })
+  const { writeContractAsync: requestFaucet } = useWriteContract()
 
   useEffect(() => {
     const checkUserRoles = async () => {
@@ -93,7 +89,10 @@ export function Header() {
     if (!address) return
     try {
       await requestFaucet({
-        args: [address, BigInt(1618)]
+        address: MockERC20.addresses['84532'] as `0x${string}`,
+        abi: MockERC20.abi,
+        functionName: 'faucet',
+        args: [address, BigInt("16180339887498948482")]
       })
     } catch (error) {
       console.error('Faucet error:', error)
@@ -108,7 +107,7 @@ export function Header() {
             href="/"
             className="text-xl font-bold text-white hover:text-white/80 transition-colors cursor-pointer"
           >
-            Visitor Information Center
+            Visitor Information Center Coupon Exchange (VICCI)
           </Link>
           {isAuthenticated && (
             <div className="flex space-x-4">

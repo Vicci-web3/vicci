@@ -8,9 +8,6 @@ import {
     cdpWalletActionProvider,
     pythActionProvider,
 } from "@coinbase/agentkit";
-import { MessageBus } from '../messageBus';
-import { Topics } from './VisitorAgent';
-
 import { ViemWalletProvider } from "@coinbase/agentkit";
 import { privateKeyToAccount } from "viem/accounts";
 import { baseSepolia } from "viem/chains";
@@ -34,7 +31,6 @@ import { vicciCampaignProvider } from '../actions/create-campaign';
 import { vicciCouponProvider } from '../actions/create-coupon';
 
 const WALLET_DATA_FILE = "wallet_data.txt";
-
 
 interface AgentConfig {
     messageModifier: string;
@@ -68,13 +64,10 @@ export default class VenueAgent {
     private callbacks: AgentCallbacks;
     private permitSignaturePromise: Promise<string> | null = null;
     private permitSignatureResolve: ((signature: string) => void) | null = null;
-    private messageBus: MessageBus;
     
     private static PERMIT_REQUEST_REGEX = /\[PERMIT_REQUEST\](.*?)\[\/PERMIT_REQUEST\]/s;
-
     private static AMOUNT_VALIDATOR = /^\d+$/;
     private static ADDRESS_VALIDATOR = /^0x[a-fA-F0-9]{40}$/;
-
     private currentValues: CurrentValues | null = null;
 
     private static readonly BOX_CONFIGS = [
@@ -123,7 +116,6 @@ export default class VenueAgent {
         console.log('Creating wallet provider...');
         this.walletProvider = createWalletProvider();
         this.callbacks = callbacks;
-        this.messageBus = new MessageBus();
         this.initialize().catch(console.error);
     }
 
@@ -315,14 +307,6 @@ export default class VenueAgent {
         try {
             console.log('Starting to process input:', input);
             
-            // Publish user message to indexer
-            await this.messageBus.publish(Topics.CHAT_MESSAGE, {
-                type: 'user',
-                role: 'venue',
-                content: input,
-                timestamp: new Date().toISOString()
-            });
-
             const timeoutPromise = new Promise((_, reject) => {
                 setTimeout(() => reject(new Error('Processing timeout')), 30000);
             });
@@ -358,14 +342,6 @@ export default class VenueAgent {
                             type: 'chat',
                             success: true,
                             message: content
-                        });
-                        
-                        // Publish agent response to indexer
-                        await this.messageBus.publish(Topics.CHAT_MESSAGE, {
-                            type: 'assistant',
-                            role: 'venue',
-                            content: content,
-                            timestamp: new Date().toISOString()
                         });
                     }
                 }
@@ -515,7 +491,7 @@ export default class VenueAgent {
         }
     }
 
-    private updateStoredValues(results: { config: typeof CoinbaseAgent.BOX_CONFIGS[0], match: RegExpMatchArray | null }[]) {
+    private updateStoredValues(results: { config: typeof VenueAgent.BOX_CONFIGS[0], match: RegExpMatchArray | null }[]) {
         try {
             results.forEach(({ config, match }) => {
                 if (match && config.validator.test(match[1])) {
@@ -532,7 +508,7 @@ export default class VenueAgent {
 
     private async handlePermitRequest(response: string) {
         try {
-            const permitMatch = response.match(CoinbaseAgent.PERMIT_REQUEST_REGEX);
+            const permitMatch = response.match(VenueAgent.PERMIT_REQUEST_REGEX);
             console.log('Permit Request Match:', {
                 found: !!permitMatch,
                 match: permitMatch,
@@ -615,8 +591,8 @@ export default class VenueAgent {
             console.log('Raw message:', message);
 
             // Extract values from raw input
-            const rewardMatch = message.match(CoinbaseAgent.REWARD_AMOUNT_INPUT_REGEX);
-            const venueMatch = message.match(CoinbaseAgent.VENUE_ADDRESS_INPUT_REGEX);
+            const rewardMatch = message.match(VenueAgent.REWARD_AMOUNT_INPUT_REGEX);
+            const venueMatch = message.match(VenueAgent.VENUE_ADDRESS_INPUT_REGEX);
 
             console.log('Preprocessing matches:', {
                 reward: {
@@ -630,11 +606,11 @@ export default class VenueAgent {
             });
 
             // Validate and store values if found
-            if (rewardMatch && CoinbaseAgent.AMOUNT_VALIDATOR.test(rewardMatch[1])) {
+            if (rewardMatch && VenueAgent.AMOUNT_VALIDATOR.test(rewardMatch[1])) {
                 console.log('✓ Found valid reward amount in input:', rewardMatch[1]);
                 this.currentValues!.rewardAmount = rewardMatch[1];
             }
-            if (venueMatch && CoinbaseAgent.ADDRESS_VALIDATOR.test(venueMatch[1])) {
+            if (venueMatch && VenueAgent.ADDRESS_VALIDATOR.test(venueMatch[1])) {
                 console.log('✓ Found valid venue address in input:', venueMatch[1]);
                 this.currentValues!.venueAddress = venueMatch[1];
             }

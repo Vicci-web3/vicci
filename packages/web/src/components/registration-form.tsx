@@ -51,23 +51,30 @@ export function RegistrationForm() {
     type: '',
   })
 
-  // Update form when wallet address changes
+  // Update form when wallet address or registration type changes
   useEffect(() => {
-    if (registerType === 'visitor' && address) {
+    if (address) {
       setFormData(prev => ({
         ...prev,
-        address: address
+        address: address,
+        ...(registerType === 'venue' ? {
+          name: 'Agent Swap',
+          email: 'agent@swap.com'
+        } : {
+          name: 'Blockchain Visitor',
+          email: 'blockchain@visitor.com'
+        })
       }))
     }
   }, [address, registerType])
 
-  // Reset form data when switching registration type
+  // Modify handleTypeChange to include defaults for both types
   const handleTypeChange = (type: RegisterType) => {
     setRegisterType(type)
     setFormData({
-      name: '',
-      email: '',
-      address: type === 'visitor' ? (address || '') : '',
+      name: type === 'venue' ? 'Agent Swap' : 'Blockchain Visitor',
+      email: type === 'venue' ? 'agent@swap.com' : 'blockchain@visitor.com',
+      address: address || '',
       type: '',
     })
   }
@@ -182,28 +189,40 @@ export function RegistrationForm() {
               Register as:
             </label>
             <div className="flex gap-4">
-              <button
-                type="button"
-                onClick={() => handleTypeChange('visitor')}
-                className={`px-4 py-2 rounded-md ${
+              <label
+                className={`px-4 py-2 rounded-md cursor-pointer ${
                   registerType === 'visitor'
                     ? 'bg-blue-600 text-white'
                     : 'bg-white/10 text-white hover:bg-white/20'
                 }`}
               >
+                <input
+                  type="radio"
+                  name="registerType"
+                  value="visitor"
+                  checked={registerType === 'visitor'}
+                  onChange={(e) => handleTypeChange(e.target.value as RegisterType)}
+                  className="sr-only"
+                />
                 Visitor
-              </button>
-              <button
-                type="button"
-                onClick={() => handleTypeChange('venue')}
-                className={`px-4 py-2 rounded-md ${
+              </label>
+              <label
+                className={`px-4 py-2 rounded-md cursor-pointer ${
                   registerType === 'venue'
                     ? 'bg-blue-600 text-white'
                     : 'bg-white/10 text-white hover:bg-white/20'
                 }`}
               >
+                <input
+                  type="radio"
+                  name="registerType"
+                  value="venue"
+                  checked={registerType === 'venue'}
+                  onChange={(e) => handleTypeChange(e.target.value as RegisterType)}
+                  className="sr-only"
+                />
                 Venue
-              </button>
+              </label>
             </div>
           </div>
 
