@@ -55,7 +55,6 @@ export default function VenueDashboard() {
   if (loading) {
     return (
       <>
-        <Header />
         <main className="container mx-auto px-4 py-8">
           <div className="text-center text-white">Loading...</div>
         </main>
@@ -65,7 +64,6 @@ export default function VenueDashboard() {
 
   return (
     <>
-      <Header />
       <main className="container mx-auto px-4 py-8">
         <div className="flex flex-col space-y-6">
           <h1 className="text-2xl font-bold text-white mb-6">Venue Dashboard</h1>

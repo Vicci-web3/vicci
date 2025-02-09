@@ -217,7 +217,6 @@ export default function VisitorDashboard() {
   if (loading) {
     return (
       <>
-        <Header />
         <main className="container mx-auto px-4 py-8">
           <div className="text-center text-white">Loading...</div>
         </main>
@@ -227,7 +226,6 @@ export default function VisitorDashboard() {
 
   return (
     <>
-      <Header />
       <main className="container mx-auto px-4 py-8">
         <h1 className="text-2xl font-bold text-white mb-6">Visitor Dashboard</h1>
         

@@ -8,7 +8,6 @@ import { MermaidDiagram } from '@/components/mermaid-diagram'
 export default function Home() {
   return (
     <div className="min-h-screen flex flex-col bg-gradient-to-b from-gray-900 to-black">
-      <Header />
       <main className="flex-grow container mx-auto px-4 py-16">
         {/* Hero Section */}
         <div className="text-center mb-24 py-20">
