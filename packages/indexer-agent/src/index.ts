@@ -6,7 +6,7 @@ import { Document } from '@langchain/core/documents'
 import { PGVectorStore } from '@langchain/community/vectorstores/pgvector'
 import { getCurrentBlock } from './utils/chain'
 import prisma from './services/prisma'
-import { GetMergedPositionsDocument, execute } from './.graphclient'
+import { GetMergedPositionsDocument, execute } from '../.graphclient'
 import { Cohere } from '@langchain/cohere'
 import { CohereEmbeddings } from '@langchain/cohere'
 
