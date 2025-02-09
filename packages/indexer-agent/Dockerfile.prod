@@ -18,13 +18,14 @@ RUN pnpm install
 # Copy source code and prisma
 COPY packages/indexer-agent ./packages/indexer-agent
 
-# Generate Prisma client
+# Generate Prisma client, build graph client and TypeScript
 RUN cd packages/indexer-agent && \
     npx prisma generate && \
-    pnpm build:graph
+    pnpm build:graph && \
+    pnpm build
 
 # Set production environment
 ENV NODE_ENV=production
 
 # Wait for Postgres and start
-CMD ["sh", "-c", "until nc -z postgres 5432; do echo waiting for postgres; sleep 2; done; cd packages/indexer-agent && npx prisma migrate deploy && tsx src/index.ts"]
+CMD ["sh", "-c", "until nc -z postgres 5432; do echo waiting for postgres; sleep 2; done; cd packages/indexer-agent && npx prisma migrate deploy && node dist/index.js"]
