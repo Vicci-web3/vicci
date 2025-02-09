@@ -35,7 +35,7 @@ const auth: FastifyPluginAsync = async (fastify): Promise<void> => {
 
       const { success, data: fields } = await siweMessage.verify({ 
         signature,
-        domain: 'localhost',
+        domain: process.env.NODE_ENV === 'production' ? 'vicci-web3.info' : 'localhost',
         nonce
       })
 
@@ -74,7 +74,7 @@ const auth: FastifyPluginAsync = async (fastify): Promise<void> => {
 
       const { success, data: fields } = await siweMessage.verify({
         signature,
-        domain: 'localhost',
+        domain: process.env.NODE_ENV === 'production' ? 'vicci-web3.info' : 'localhost',
         nonce
       })
 

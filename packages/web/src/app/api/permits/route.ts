@@ -20,12 +20,12 @@ export async function GET(request: NextRequest) {
   console.log('🚀 [Next.js Permits API] Route handler triggered');
   console.log('🔍 [Next.js Permits API] Request URL:', request.url);
   console.log('🔑 [Next.js Permits API] Request method:', request.method);
-  console.log('🌍 [Next.js Permits API] API_URL:', process.env.API_URL);
+  console.log('🌍 [Next.js Permits API] API_URL:', process.env.NEXT_PUBLIC_API_URL);
 
   const searchParams = request.nextUrl.searchParams;
   const address = searchParams.get('address');
   
-  if (!process.env.API_URL) {
+  if (!process.env.NEXT_PUBLIC_API_URL) {
     console.error('❌ [Next.js Permits API] API_URL environment variable is not set');
     return Response.json(
       { error: 'API configuration error', details: 'API_URL is not configured' },
@@ -42,7 +42,7 @@ export async function GET(request: NextRequest) {
   }
 
   try {
-    const url = `${process.env.API_URL}/permits?address=${address}`;
+    const url = `${process.env.NEXT_PUBLIC_API_URL}/permits?address=${address}`;
     console.log('🎯 [Next.js Permits API] Making request to:', url);
 
     const response = await fetch(url, {
