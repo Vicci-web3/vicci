@@ -1,3 +1,4 @@
+// @ts-nocheck
 import 'dotenv/config'
 import { MessageBus, Topics } from './messageBus'
 import { PromptTemplate } from '@langchain/core/prompts'

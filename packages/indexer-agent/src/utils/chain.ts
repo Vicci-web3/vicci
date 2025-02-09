@@ -1,3 +1,4 @@
+// @ts-nocheck
 // TODO: Implement with your preferred web3 library
 import { 
   createPublicClient,

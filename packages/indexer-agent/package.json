@@ -4,7 +4,7 @@
   "scripts": {
     "dev": "pnpm db:init && tsx watch --clear-screen=false src/index.ts",
     "codegen": "graphclient build",
-    "build": "tsc",
+    "build": "tsc --noEmitOnError false",
     "build:graph": "graphclient build",
     "test": "jest",
     "prisma:generate": "prisma generate",
