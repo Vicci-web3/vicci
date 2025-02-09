@@ -59,8 +59,10 @@ services:
       - API_URL=http://api:3001
       - NEXT_PUBLIC_ONCHAINKIT_API_KEY=${NEXT_PUBLIC_ONCHAINKIT_API_KEY}
       - NEXT_PUBLIC_ALCHEMY_API_KEY=${ALCHEMY_API_KEY}
+    volumes:
+      - /usr/src/app/packages/web/.next:/root/vicci/packages/web/.next
     expose:
-      - "3000"
+      - "3003"
     depends_on:
       - api
 
