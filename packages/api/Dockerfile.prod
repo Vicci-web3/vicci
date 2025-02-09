@@ -15,16 +15,12 @@ COPY packages/api/package*.json ./packages/api/
 # Install all dependencies for build
 RUN pnpm install --frozen-lockfile
 
-# Copy prisma schema first (for better layer caching)
+# Copy prisma schema and generate client
 COPY packages/api/prisma ./packages/api/prisma
-
-# Generate Prisma client before copying rest of the code
 RUN cd packages/api && pnpm prisma generate
 
-# Copy source code
+# Copy source code and build
 COPY packages/api ./packages/api
-
-# Build TypeScript
 RUN cd packages/api && pnpm build
 
 # Production stage
@@ -39,14 +35,15 @@ RUN apk add --no-cache git && \
 # Copy package files
 COPY package*.json pnpm-workspace.yaml pnpm-lock.yaml ./
 COPY packages/api/package*.json ./packages/api/
+COPY packages/api/prisma ./packages/api/prisma
 
-# Install production dependencies only
-RUN pnpm install --frozen-lockfile --prod
+# Install production dependencies and generate Prisma client
+RUN pnpm install --frozen-lockfile --prod && \
+    cd packages/api && \
+    pnpm prisma generate
 
 # Copy built application from builder
 COPY --from=builder /usr/src/app/packages/api/dist ./packages/api/dist
-COPY --from=builder /usr/src/app/packages/api/prisma ./packages/api/prisma
-COPY --from=builder /usr/src/app/packages/api/node_modules/.prisma ./packages/api/node_modules/.prisma
 
 # Set production environment
 ENV NODE_ENV=production
