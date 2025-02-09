@@ -243,9 +243,9 @@ export default class VenueAgent {
             */
             const agentConfig = this.getAgentConfig();
             const agentkit = await AgentKit.from({
-                //walletProvider,
+                walletProvider,
                 cdpApiKeyName: process.env.CDP_API_KEY_NAME,
-                cdpApiKeyPrivateKey: process.env.CDP_API_KEY_PRIVATE_KEY?.replace(/\\n/g, "\n"),
+                cdpApiKeyPrivateKey: process.env.CDP_API_KEY_PRIVATE_KEY,
                 actionProviders: agentConfig.actionProviders,
             });
 
