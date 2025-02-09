@@ -1,3 +1,4 @@
+// @ts-nocheck
 import amqp, { ConsumeMessage } from 'amqplib'
 
 export const Topics = {

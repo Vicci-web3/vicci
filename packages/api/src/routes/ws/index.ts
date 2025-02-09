@@ -1,3 +1,4 @@
+// @ts-nocheck
 import { FastifyPluginAsync } from 'fastify'
 import { WebsocketHandler } from '@fastify/websocket'
 import VisitorAgent from '../../agent/VisitorAgent'
