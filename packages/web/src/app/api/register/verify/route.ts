@@ -6,7 +6,7 @@ export async function POST(request: Request) {
     const { message, signature } = body
 
     // Forward the verification request to the API service
-    const apiResponse = await fetch(`${process.env.API_URL}/api/register/verify`, {
+    const apiResponse = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/register/verify`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',

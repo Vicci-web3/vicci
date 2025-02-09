@@ -55,10 +55,10 @@ export async function POST(request: Request) {
     const res = NextResponse.json({ success: true })
     res.cookies.set('siwe', JSON.stringify({ message, signature }), {
       path: '/',
-      httpOnly: true,
-      secure: process.env.NODE_ENV === 'production',
+      httpOnly: false,
+      secure: false,
       sameSite: 'strict',
-      maxAge: 60 * 60 * 24 // 24 hours
+      maxAge: 604800 // 7 days
     })
     return res
 

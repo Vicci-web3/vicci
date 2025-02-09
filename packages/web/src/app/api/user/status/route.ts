@@ -14,7 +14,7 @@ export async function GET(request: Request) {
     }
 
     // Forward the request to the API service
-    const apiResponse = await fetch(`${process.env.API_URL}/api/user/status?address=${address}`)
+    const apiResponse = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/user/status?address=${address}`)
     const data = await apiResponse.json()
 
     if (!apiResponse.ok) {

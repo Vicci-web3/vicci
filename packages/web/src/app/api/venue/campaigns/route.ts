@@ -5,10 +5,10 @@ export async function GET(request: NextRequest) {
   const address = searchParams.get('address');
   
   console.log('Next.js API Route - Fetching campaigns for address:', address);
-  console.log('API URL:', process.env.API_URL);
+  console.log('API URL:', process.env.NEXT_PUBLIC_API_URL);
 
   try {
-    const url = `${process.env.API_URL}/venue/campaigns?address=${address}`;
+    const url = `${process.env.NEXT_PUBLIC_API_URL}/venue/campaigns?address=${address}`;
     console.log('Making request to:', url);
 
     const response = await fetch(url, {

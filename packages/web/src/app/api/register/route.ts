@@ -2,7 +2,7 @@ import { NextResponse } from 'next/server'
 
 export async function GET() {
   try {
-    const response = await fetch(`${process.env.API_URL}/api/register/nonce`)
+    const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/register/nonce`)
     const nonce = await response.text()
     return new Response(nonce, {
       headers: { 'Content-Type': 'text/plain' },
@@ -17,7 +17,7 @@ export async function POST(request: Request) {
     const body = await request.json()
     
     // Forward request to API
-    const response = await fetch(`${process.env.API_URL}/api/register`, {
+    const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/register`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
